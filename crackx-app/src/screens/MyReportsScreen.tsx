@@ -29,7 +29,6 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
     const [reports, setReports] = useState<Report[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [feedbackText, setFeedbackText] = useState<{ [key: string]: string }>({});
-    const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
 
     useEffect(() => {
         loadReports();
@@ -99,11 +98,6 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
         }
     };
 
-    const filteredReports = reports.filter(report => {
-        if (filterStatus === 'all') return true;
-        return report.status === filterStatus;
-    });
-
     return (
         <DashboardLayout
             title={t('my_reports')}
@@ -113,58 +107,34 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
             onLogout={onLogout}
         >
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Stats Summary - Clickable Filters */}
+                {/* Stats Summary */}
                 <View style={styles.statsCard}>
-                    <TouchableOpacity
-                        style={[styles.statItem, filterStatus === 'all' && styles.activeFilter]}
-                        onPress={() => setFilterStatus('all')}
-                    >
+                    <View style={styles.statItem}>
                         <Text style={styles.statValue}>{reports.length}</Text>
-                        <Text style={[styles.statLabel, filterStatus === 'all' && styles.activeFilterText]}>Total</Text>
-                    </TouchableOpacity>
+                        <Text style={styles.statLabel}>Total</Text>
+                    </View>
                     <View style={styles.divider} />
-                    <TouchableOpacity
-                        style={[styles.statItem, filterStatus === 'pending' && styles.activeFilter]}
-                        onPress={() => setFilterStatus('pending')}
-                    >
+                    <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: COLORS.warning }]}>
                             {reports.filter(r => r.status === 'pending').length}
                         </Text>
-                        <Text style={[styles.statLabel, filterStatus === 'pending' && styles.activeFilterText]}>Pending</Text>
-                    </TouchableOpacity>
+                        <Text style={styles.statLabel}>Pending</Text>
+                    </View>
                     <View style={styles.divider} />
-                    <TouchableOpacity
-                        style={[styles.statItem, filterStatus === 'completed' && styles.activeFilter]}
-                        onPress={() => setFilterStatus('completed')}
-                    >
+                    <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: COLORS.success }]}>
                             {reports.filter(r => r.status === 'completed').length}
                         </Text>
-                        <Text style={[styles.statLabel, filterStatus === 'completed' && styles.activeFilterText]}>Fixed</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Active Filter Indicator */}
-                {filterStatus !== 'all' && (
-                    <View style={styles.filterIndication}>
-                        <Text style={styles.filterText}>
-                            Showing {filterStatus === 'completed' ? 'Fixed' : 'Pending'} Reports
-                        </Text>
-                        <TouchableOpacity onPress={() => setFilterStatus('all')}>
-                            <Text style={styles.clearFilter}>Clear Filter</Text>
-                        </TouchableOpacity>
+                        <Text style={styles.statLabel}>Fixed</Text>
                     </View>
-                )}
-
-                {filteredReports.length === 0 ? (
+                </View>
+                {reports.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyIcon}>📭</Text>
-                        <Text style={styles.emptyText}>
-                            {filterStatus === 'all' ? t('no_reports') : `No ${filterStatus} reports found`}
-                        </Text>
+                        <Text style={styles.emptyText}>{t('no_reports')}</Text>
                     </View>
                 ) : (
-                    filteredReports.map((report) => (
+                    reports.map((report) => (
                         <View key={report.id} style={styles.reportCard}>
                             {/* Photo */}
                             {report.photoUri && (
@@ -670,30 +640,5 @@ const styles = StyleSheet.create({
         color: COLORS.white,
         fontSize: 14,
         fontWeight: '600',
-    },
-    activeFilter: {
-        backgroundColor: COLORS.secondary + '20', // Light opacity version of secondary color
-        borderRadius: 8,
-        padding: 4,
-    },
-    activeFilterText: {
-        color: COLORS.primary,
-    },
-    filterIndication: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        marginBottom: 16,
-    },
-    filterText: {
-        fontSize: 14,
-        color: COLORS.dark,
-        fontWeight: '600',
-    },
-    clearFilter: {
-        fontSize: 14,
-        color: COLORS.primary,
-        fontWeight: 'bold',
     },
 });
