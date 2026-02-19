@@ -84,7 +84,7 @@ export default function ComplianceDashboardScreen({ onNavigate, onLogout }: Comp
 
         const total = sortedReports.length;
         const completed = sortedReports.filter(r => r.status === 'completed').length;
-        const pending = sortedReports.filter(r => r.status === 'pending').length;
+        const pending = sortedReports.filter(r => ['pending', 'verification-pending'].includes(r.status)).length;
         const inProgress = sortedReports.filter(r => r.status === 'in-progress').length;
 
         console.log(`[Compliance] RSO ${rso.username} (${rso.zone}): ${total} total reports (${completed} completed, ${pending} pending, ${inProgress} in-progress)`);

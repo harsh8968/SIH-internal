@@ -116,9 +116,9 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
                     <View style={styles.divider} />
                     <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: COLORS.warning }]}>
-                            {reports.filter(r => r.status === 'pending').length}
+                            {reports.filter(r => ['pending', 'in-progress', 'verification-pending'].includes(r.status)).length}
                         </Text>
-                        <Text style={styles.statLabel}>Pending</Text>
+                        <Text style={styles.statLabel}>Active</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.statItem}>
