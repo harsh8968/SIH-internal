@@ -1,7 +1,6 @@
 {
     "devCommand": "npm run web",
     "buildCommand": "npm run build:web",
-    "framework": "expo",
     "outputDirectory": "dist",
     "routes": [
         {
