@@ -22,32 +22,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "model", "best.pt")
 detector = None
 
-# Background Task Management
-import asyncio
-from video_processor import get_pending_video_reports, process_video_report
-
-async def video_processing_loop():
-    print("🚀 Background Video Processing Task Started")
-    while True:
-        try:
-            # Run blocking DB/IO operations in a thread to avoid blocking the event loop
-            pending_reports = await asyncio.to_thread(get_pending_video_reports)
-            
-            if pending_reports:
-                print(f"📋 Found {len(pending_reports)} pending video report(s)")
-                for report in pending_reports:
-                    await asyncio.to_thread(process_video_report, report)
-            
-            # Wait 30 seconds before next poll
-            await asyncio.sleep(30)
-            
-        except asyncio.CancelledError:
-            print("⛔ Video processing task cancelled")
-            break
-        except Exception as e:
-            print(f"❌ Error in video processing loop: {e}")
-            await asyncio.sleep(30)
-
 @app.on_event("startup")
 async def startup_event():
     global detector
@@ -59,9 +33,6 @@ async def startup_event():
             detector = RoadDamageDetector(MODEL_PATH)
         except Exception as e:
             print(f"Failed to load model: {e}")
-    
-    # Start background task
-    asyncio.create_task(video_processing_loop())
 
 @app.get("/health")
 async def health_check():
@@ -91,6 +62,9 @@ async def detect_damage(image: UploadFile = File(...)):
                 }
             }
         else:
+            # If no detection found above threshold, return failure? Or mock response if requested?
+            # The app likely expects success=false or empty detection?
+            # Based on ai.ts, if success=false, it falls back to mock.
             return {"success": False, "message": "No significant damage detected or low confidence"}
             
     except Exception as e:
