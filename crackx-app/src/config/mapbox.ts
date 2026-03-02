@@ -13,7 +13,7 @@
 
 export const MAPBOX_CONFIG = {
     // REPLACE THIS STRING WITH YOUR ACTUAL KEY starting with "pk."
-    accessToken: 'pk.eyJ1IjoiYXJhdnBhbHN1bGUiLCJhIjoiY21sMTdsbHBiMDEzMTNtcXR2amt3dW91cyJ9.RZ6DjJ3i7MiZfshrM-mjsw',
+    accessToken: 'enter_your mapbox_access_token_here',
 
     // Style URL (Using standard Mapbox Streets style)
     styleUrl: 'mapbox://styles/mapbox/streets-v11',
