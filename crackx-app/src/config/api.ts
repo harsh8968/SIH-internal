@@ -36,12 +36,13 @@ let CURRENT_ENV: Environment = 'local_network';
 
 if (Platform.OS === 'web') {
     // If we're on web, check if we're on localhost or production
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    const win = (typeof window !== 'undefined' ? window : null) as any;
+    if (win && (win.location.hostname === 'localhost' || win.location.hostname === '127.0.0.1')) {
         CURRENT_ENV = 'development';
     } else {
         CURRENT_ENV = 'production';
     }
-} else if (Platform.OS === 'android' && !__DEV__) {
+} else if (Platform.OS === 'android' && !(global as any).__DEV__) {
     CURRENT_ENV = 'production';
 }
 
@@ -50,10 +51,10 @@ const config = API_URLS[CURRENT_ENV];
 
 // Optional: Override with environment variables if provided (e.g., in Vercel or EAS)
 // Note: process.env.EXPO_PUBLIC_API_URL is the standard way for Expo 49+
-const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL;
+const ENV_API_URL = (process.env as any).EXPO_PUBLIC_API_URL;
 
 export const BASE_URL = Platform.OS === 'web' && CURRENT_ENV === 'production' && typeof window !== 'undefined'
-    ? window.location.origin
+    ? (window as any).location.origin
     : (ENV_API_URL || config.baseUrl);
 
 export const API_BASE_URL = `${BASE_URL}/api`;
@@ -75,7 +76,7 @@ export const TIMEOUTS = {
 };
 
 // Debug mode
-export const DEBUG = __DEV__;
+export const DEBUG = (global as any).__DEV__;
 
 // Log API configuration on app start
 if (DEBUG) {
