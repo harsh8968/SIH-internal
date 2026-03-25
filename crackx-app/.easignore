@@ -1,0 +1,20 @@
+# Exclude unnecessary files from EAS build
+*.md
+*.log
+.git
+.github
+.vscode
+.idea
+*.test.js
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
+__tests__
+coverage
+.expo
+.expo-shared
+node_modules/.cache
+*.map
+*.tsbuildinfo
