@@ -1,0 +1,59 @@
+{
+  "cli": {
+    "version": ">= 10.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "resourceClass": "medium"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
+        "resourceClass": "medium"
+      }
+    },
+    "production-apk": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "resourceClass": "medium"
+      },
+      "env": {
+        "GRADLE_OPTS": "-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fqovaczstxiulquorabv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxb3ZhY3pzdHhpdWxxdW9yYWJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMTMyNDIsImV4cCI6MjA4NTY4OTI0Mn0.3BaKpEGLdiSBmlSFVicdBm08QRTbMbJQWtMKqDMFuZs"
+      },
+      "cache": {
+        "key": "production-apk-cache",
+        "cacheDefaultPaths": true,
+        "customPaths": [
+          "node_modules",
+          ".expo"
+        ]
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}
