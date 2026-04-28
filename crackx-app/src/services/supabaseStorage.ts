@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Report } from '../types';
-import { STORAGE_KEYS, HARDCODED_DEMO_USERS } from '../constants';
+import { STORAGE_KEYS, HARDCODED_DEMO_USERS, DEMO_CONTRACTORS } from '../constants';
 import supabase from '../config/supabase';
 import notificationService from './notifications';
 
@@ -271,7 +271,16 @@ class SupabaseStorageService {
                     location: report.location,
                     photo_uri: report.photoUri,
                     video_uri: report.videoUri,
-                    ai_detection: report.aiDetection,
+                    ai_detection: {
+                        ...report.aiDetection,
+                        management: {
+                            contractorId: report.contractorId,
+                            assignedDepartment: report.assignedDepartment,
+                            rootCause: report.rootCause,
+                            utilityType: report.utilityType,
+                            workOrderGeneratedAt: report.workOrderGeneratedAt
+                        }
+                    },
                     status: report.status,
                     sync_status: 'synced',
                     created_at: report.createdAt,
@@ -406,12 +415,12 @@ class SupabaseStorageService {
                 rsoId: report.rso_id,
                 citizenRating: report.citizen_rating,
                 citizenFeedback: report.citizen_feedback,
-                assignedDepartment: report.assigned_department,
+                assignedDepartment: report.assigned_department || report.ai_detection?.management?.assignedDepartment,
                 originDepartment: report.origin_department,
-                rootCause: report.root_cause,
-                utilityType: report.utility_type,
-                contractorId: report.contractor_id,
-                workOrderGeneratedAt: report.work_order_generated_at,
+                rootCause: report.root_cause || report.ai_detection?.management?.rootCause,
+                utilityType: report.utility_type || report.ai_detection?.management?.utilityType,
+                contractorId: report.contractor_id || report.ai_detection?.management?.contractorId,
+                workOrderGeneratedAt: report.work_order_generated_at || report.ai_detection?.management?.workOrderGeneratedAt,
             }));
 
             // Update local cache
@@ -444,47 +453,8 @@ class SupabaseStorageService {
      * Get reports by zone
      */
     async getReportsByZone(zone: string): Promise<Report[]> {
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('location->>zone', zone)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            return data.map(report => ({
-                id: report.id,
-                citizenId: report.citizen_id,
-                reportingMode: report.reporting_mode,
-                location: report.location,
-                photoUri: report.photo_uri,
-                videoUri: report.video_uri,
-                aiDetection: report.ai_detection,
-                status: report.status,
-                syncStatus: 'synced' as const,
-                createdAt: report.created_at,
-                updatedAt: report.updated_at,
-                repairProofUri: report.repair_proof_uri,
-                repairCompletedAt: report.repair_completed_at,
-
-                reportApprovedForPoints: report.report_approved_for_points,
-                repairApprovedForPoints: report.repair_approved_for_points,
-                rsoId: report.rso_id,
-                citizenRating: report.citizen_rating,
-                citizenFeedback: report.citizen_feedback,
-                assignedDepartment: report.assigned_department,
-                originDepartment: report.origin_department,
-                rootCause: report.root_cause,
-                utilityType: report.utility_type,
-                contractorId: report.contractor_id,
-                workOrderGeneratedAt: report.work_order_generated_at,
-            }));
-        } catch (error) {
-            console.error('[Supabase] Error fetching reports by zone:', error);
-            const reports = await this.getReports();
-            return reports.filter(r => r.location.zone === zone);
-        }
+        const reports = await this.getReports();
+        return reports.filter(r => r.location.zone === zone);
     }
 
     /**
@@ -619,6 +589,10 @@ class SupabaseStorageService {
 
             if (error) throw error;
 
+            if (!data || data.length === 0) {
+                return DEMO_CONTRACTORS.filter(c => c.zone === zone);
+            }
+
             return data.map(c => ({
                 id: c.id,
                 name: c.name,
@@ -629,7 +603,8 @@ class SupabaseStorageService {
             }));
         } catch (error) {
             console.error('[Supabase] Error fetching contractors:', error);
-            return [];
+            // Fallback for demo mode
+            return DEMO_CONTRACTORS.filter(c => c.zone === zone);
         }
     }
 

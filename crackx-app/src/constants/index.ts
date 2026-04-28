@@ -1,4 +1,21 @@
-import { Zone } from '../types';
+import { Zone, Contractor } from '../types';
+
+// ... (rest of imports)
+
+// Hardcoded Demo Contractors (Fallbacks for UI testing)
+export const DEMO_CONTRACTORS: Contractor[] = [
+    // Zone 1
+    { id: 'cont_amit', name: 'Amit', agencyName: 'Amit Road Solutions', zone: 'zone1', rating: 4.8 },
+    { id: 'cont_amit_s', name: 'Amit S', agencyName: 'A.S. Infrastructure', zone: 'zone1', rating: 4.5 },
+
+    // Zone 4
+    { id: 'cont_anil', name: 'Anil', agencyName: 'Anil Paving Works', zone: 'zone4', rating: 4.6 },
+    { id: 'cont_ganesh', name: 'Ganesh', agencyName: 'Ganesh Constructions', zone: 'zone4', rating: 4.7 },
+
+    // Zone 8 (Central Solapur)
+    { id: 'cont_prakash', name: 'Prakash', agencyName: 'Prakash Buildtech', zone: 'zone8', rating: 4.9 },
+    { id: 'cont_rahul', name: 'Rahul', agencyName: 'Rahul Maintenance Co', zone: 'zone8', rating: 4.2 }
+];
 
 // Demo Credentials
 export const DEMO_CREDENTIALS = {
@@ -15,6 +32,13 @@ export const HARDCODED_DEMO_USERS: Record<string, any> = {
     'arav': { id: 'cit_arav', username: 'arav', password: 'arav', role: 'citizen', isApproved: true },
     'abbas': { id: 'cit_abbas', username: 'abbas', password: 'abbas', role: 'citizen', isApproved: true },
     'officer': { id: 'comp_officer', username: 'officer', password: 'officer', role: 'compliance_officer', isApproved: true },
+    // 6 Active Contractors (Pattern: name / name123)
+    'amit': { id: 'cont_amit_user', username: 'amit', password: 'amit123', role: 'contractor', contractorId: 'cont_amit', isApproved: true },
+    'amit_s': { id: 'cont_amit_s_user', username: 'amit_s', password: 'amit_s123', role: 'contractor', contractorId: 'cont_amit_s', isApproved: true },
+    'anil': { id: 'cont_anil_user', username: 'anil', password: 'anil123', role: 'contractor', contractorId: 'cont_anil', isApproved: true },
+    'ganesh': { id: 'cont_ganesh_user', username: 'ganesh', password: 'ganesh123', role: 'contractor', contractorId: 'cont_ganesh', isApproved: true },
+    'prakash': { id: 'cont_prakash_user', username: 'prakash', password: 'prakash123', role: 'contractor', contractorId: 'cont_prakash', isApproved: true },
+    'rahul': { id: 'cont_rahul_user', username: 'rahul', password: 'rahul123', role: 'contractor', contractorId: 'cont_rahul', isApproved: true },
 };
 
 // Zone Definitions for Solapur Municipal Corporation

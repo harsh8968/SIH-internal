@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
 import { Report, User } from '../types';
 import storageService from '../services/supabaseStorage';
+import { DEMO_CONTRACTORS } from '../constants';
 import authService from '../services/supabaseAuth';
 import { formatDate, getSeverityColor } from '../utils';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,35 +49,37 @@ export default function ContractorHomeScreen({ onNavigate, onLogout }: Contracto
         setLoading(true);
         try {
             const currentUser = await authService.getCurrentUser();
-            if (currentUser && currentUser.contractorId) {
-                console.log('[Contractor Dashboard] Current User:', currentUser.username, 'Contractor ID:', currentUser.contractorId);
-                setUser(currentUser);
+            if (currentUser) {
+                // Self-Healing: Ensure demo contractor accounts have a contractorId
+                if (!currentUser.contractorId) {
+                    if (currentUser.username === 'amit') currentUser.contractorId = 'cont_amit';
+                    if (currentUser.username === 'amit_s') currentUser.contractorId = 'cont_amit_s';
+                    if (currentUser.username === 'anil') currentUser.contractorId = 'cont_anil';
+                    if (currentUser.username === 'ganesh') currentUser.contractorId = 'cont_ganesh';
+                    if (currentUser.username === 'prakash') currentUser.contractorId = 'cont_prakash';
+                    if (currentUser.username === 'rahul') currentUser.contractorId = 'cont_rahul';
+                }
 
-                // Fetch ALL reports and filter (since we don't have a direct ByContractor ID method yet, or we can add one)
-                // Efficient way: storageService.getReports() then filter
-                const allReports = await storageService.getReports();
-                console.log('[Contractor Dashboard] Total Reports Fetched:', allReports.length);
+                if (currentUser.contractorId) {
+                    console.log('[Contractor Dashboard] Current User:', currentUser.username, 'ID:', currentUser.contractorId);
+                    setUser(currentUser);
 
-                const myTasks = allReports.filter(r => {
-                    // Debug each relevant report
-                    if (r.status === 'in-progress' || r.status === 'verification-pending') {
-                        console.log(`Report [${r.id}] Contractor: ${r.contractorId} vs Me: ${currentUser.contractorId} -> Match? ${r.contractorId === currentUser.contractorId}`);
-                    }
-                    return r.contractorId === currentUser.contractorId &&
-                        (r.status === 'in-progress' || r.status === 'verification-pending' || r.status === 'completed');
-                });
+                    const allReports = await storageService.getReports();
+                    const myTasks = allReports.filter(r => 
+                        r.contractorId === currentUser.contractorId &&
+                        (r.status === 'in-progress' || r.status === 'verification-pending' || r.status === 'completed')
+                    );
 
-                console.log('[Contractor Dashboard] My Tasks Count:', myTasks.length);
+                    // Sort: In-Progress first, then Verification Pending, then Completed
+                    myTasks.sort((a, b) => {
+                        const statusOrder: Record<string, number> = { 'in-progress': 1, 'verification-pending': 2, 'completed': 3 };
+                        return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+                    });
 
-                // Sort: In-Progress first, then Verification Pending, then Completed
-                myTasks.sort((a, b) => {
-                    const statusOrder = { 'in-progress': 1, 'verification-pending': 2, 'completed': 3, 'pending': 4 };
-                    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
-                });
-
-                setReports(myTasks);
-            } else {
-                Alert.alert('Error', 'No contractor profile linked to this user.');
+                    setReports(myTasks);
+                } else {
+                    Alert.alert('Error', 'No contractor profile linked to this user.');
+                }
             }
         } catch (error) {
             console.error('Error loading contractor tasks:', error);
@@ -181,8 +184,9 @@ export default function ContractorHomeScreen({ onNavigate, onLogout }: Contracto
             onLogout={handleLogout}
         >
             <View style={styles.headerBar}>
-                <Text style={styles.welcomeText}>Agency: Solapur Infra Solutions</Text>
-                {/* In real app, fetch agency name from Contractor table */}
+                <Text style={styles.welcomeText}>
+                    Agency: {DEMO_CONTRACTORS.find(c => c.id === user?.contractorId)?.agencyName || 'Solapur Infra Solutions'}
+                </Text>
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

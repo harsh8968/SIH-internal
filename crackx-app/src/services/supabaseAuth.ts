@@ -27,7 +27,13 @@ class SupabaseAuthService {
             if (persisted) {
                 console.log(`[Auth] Using Supabase data for demo user: ${normalizedUsername}`);
                 const { password: _, ...rest } = persisted;
-                user = rest as User;
+                // CRITICAL: Merge with hardcoded to get latest fields (like contractorId) 
+                // that were added to the code after the user first logged in.
+                user = { ...hardcoded, ...rest } as User;
+                delete (user as any).password;
+                
+                // Save the merged version back to Supabase/Cache so future loads are correct
+                await supabaseStorage.saveRegisteredUser({ ...hardcoded, ...rest });
             } else {
                 console.log(`[Auth] Hardcoded user found: ${normalizedUsername}`);
                 const { password: _, ...userData } = hardcoded;
