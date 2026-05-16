@@ -16,7 +16,6 @@ const config = {
     blockList: [
       /android\/.*/,
       /ios\/.*/,
-      /node_modules\/.*\/node_modules\/.*/,
       /node_modules\/expo-modules-core\/expo-module-gradle-plugin\/.*/,
     ],
   },

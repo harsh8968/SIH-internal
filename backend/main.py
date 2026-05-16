@@ -4,6 +4,10 @@ from inference import RoadDamageDetector
 import uvicorn
 import os
 import io
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from PIL import Image
 
 app = FastAPI()
@@ -74,4 +78,5 @@ async def detect_damage(image: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    port = int(os.getenv("PORT", 5000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

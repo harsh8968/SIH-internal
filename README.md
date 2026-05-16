@@ -90,7 +90,8 @@ npm install
 Create a `.env` file in the `backend/` directory:
 ```env
 SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_role_key
+PORT=5000
 ```
 
 **Frontend:**
@@ -98,7 +99,18 @@ Create a `.env` file in the `crackx-app/` directory:
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_API_URL=http://localhost:5000
 ```
+
+### 3. Vercel Deployment (Frontend)
+To deploy the frontend to Vercel:
+1. Push your code to GitHub.
+2. Import the `crackx-app` directory into Vercel.
+3. Use the following build settings:
+   - **Framework Preset**: Other
+   - **Build Command**: `npm run build:web`
+   - **Output Directory**: `dist`
+4. Add your `.env` variables in the Vercel project settings.
 
 ### 3. Database Setup
 Run the setup scripts to initialize your Supabase project:
