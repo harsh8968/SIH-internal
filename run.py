@@ -2,56 +2,71 @@ import subprocess
 import os
 import sys
 import time
-
-def run_command_new_window(command, cwd, title):
-    """Runs a command in a new terminal window (Windows)."""
-    if os.name == 'nt':
-        # cmd /k keeps the window open after the command finishes/fails so you can see logs
-        # The first argument to start is the Window Title in quotes
-        subprocess.Popen(f'start "{title}" cmd /k "{command}"', cwd=cwd, shell=True)
-    else:
-        print(f"Starting {title} in background (Non-Windows)...")
-        subprocess.Popen(command, cwd=cwd, shell=True)
+import signal
 
 def main():
-    # Get the directory where this script is located
     project_root = os.path.dirname(os.path.abspath(__file__))
-    
     backend_dir = os.path.join(project_root, "backend")
     frontend_dir = os.path.join(project_root, "crackx-app")
 
     print("==================================================")
-    print("   🚀 CrackX App - Full Stack Launcher")
+    print("   🚀 CrackX App - Single Terminal Launcher")
     print("==================================================")
 
-    # Check directories
-    if not os.path.exists(backend_dir):
-        print(f"❌ Error: Backend directory not found at {backend_dir}")
-        return
-    if not os.path.exists(frontend_dir):
-        print(f"❌ Error: Frontend directory not found at {frontend_dir}")
-        return
+    processes = []
 
-    print("\n1. Launching Backend Server (Python/FastAPI)...")
-    # Launching python main.py
-    run_command_new_window("python main.py", backend_dir, "CrackX Backend Server")
-    
-    # Wait a moment for backend to potentially start (optional, just for UX)
-    time.sleep(2)
+    try:
+        print("\n1. Starting Backend Server...")
+        backend_proc = subprocess.Popen(
+            [sys.executable, "main.py"],
+            cwd=backend_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            bufsize=1
+        )
+        processes.append(backend_proc)
 
-    print("2. Launching Frontend Web App (Expo)...")
-    # Launching npm run web
-    # This will compile the web app and typically open the default browser
-    run_command_new_window("npm run web", frontend_dir, "CrackX Frontend Web")
+        print("2. Starting Metro Bundler (Web/PWA)...")
+        metro_proc = subprocess.Popen(
+            ["npx", "expo", "start", "--web"],
+            cwd=frontend_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            bufsize=1,
+            shell=True
+        )
+        processes.append(metro_proc)
 
-    print("\n✅ All services launched!")
-    print("--------------------------------------------------")
-    print("• Backend Terminal: Running on http://localhost:5000")
-    print("• Frontend Terminal: Building web bundle...")
-    print("• The browser should open automatically once the build completes.")
-    print("--------------------------------------------------")
-    print("Note: Keep the terminal windows open to keep the servers running.")
-    print("You can close this launcher window now.")
+        print("\n[INFO] Backend and Web services initiated.")
+        print("[INFO] Press Ctrl+C to stop everything.\n")
+
+        # Function to print output from background processes
+        import threading
+        def print_output(name, pipe):
+            for line in iter(pipe.readline, ''):
+                print(f"[{name}] {line.strip()}")
+
+        threading.Thread(target=print_output, args=("Backend", backend_proc.stdout), daemon=True).start()
+        threading.Thread(target=print_output, args=("Metro", metro_proc.stdout), daemon=True).start()
+
+        # Keep the script running
+        while True:
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("\n\nStopping all services...")
+        for p in processes:
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(p.pid)])
+            else:
+                p.terminate()
+        print("Done.")
 
 if __name__ == "__main__":
     main()

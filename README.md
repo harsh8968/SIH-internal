@@ -110,17 +110,21 @@ node setup-supabase.js
 
 ## ▶️ Running the Application
 
-The easiest way to run the full stack is using the provided launcher script in the root directory:
+The application has been migrated to a **Bare React Native** project.
 
 ```bash
-# From the root project directory (RCMS)
-python run.py
-```
+# 1. Start the Metro Bundler
+cd crackx-app
+npm start
 
-This will automatically:
-1.  Launch the **Backend API** (Python FastAPI) on port 8000.
-2.  Start the **Frontend App** (Expo) on the default Metro port.
-3.  Open the web version in your default browser.
+# 2. Run on Android (In a new terminal)
+cd crackx-app
+npm run android
+
+# 3. Launch Backend
+cd backend
+python main.py
+```
 
 ---
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform, Text, TouchableOpacity, Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initI18n } from './src/i18n';
@@ -61,9 +61,28 @@ export default function App() {
   const [liveDetectionData, setLiveDetectionData] = useState<{ photoUri: string; detection: AIDetectionResult } | null>(null);
   const [selectedReviewReport, setSelectedReviewReport] = useState<Report | null>(null);
 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   useEffect(() => {
     initialize();
 
+    if (Platform.OS === 'web') {
+      const handleBeforeInstallPrompt = (e: any) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        setDeferredPrompt(e);
+      };
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     // Listener for when user taps a notification
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const { data } = response.notification.request.content;
@@ -400,9 +419,53 @@ export default function App() {
     }
   };
 
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      alert('Installation is only available in supported browsers (like Chrome or Edge) when the app is served over HTTPS or localhost.');
+      return;
+    }
+    // Show the prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    // We've used the prompt, and can't use it again, throw it away
+    setDeferredPrompt(null);
+  };
+
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
+      {Platform.OS === 'web' && (
+        <View style={styles.webBanner}>
+          <Text style={styles.webBannerText}>
+            📲 Get the CrackX App for the best experience!
+          </Text>
+          <View style={styles.bannerButtons}>
+            {deferredPrompt && (
+              <TouchableOpacity 
+                style={styles.installButton}
+                onPress={handleInstallApp}
+              >
+                <Text style={styles.installButtonText}>Install Directly</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              style={styles.downloadButton}
+              onPress={() => {
+                const apkUrl = 'https://your-website.com/crackx.apk'; // Replace with your real link later
+                alert('In a real deployment, this would download the APK from your server.');
+                // For now, we try to open the local build path if it exists
+                Linking.openURL('/android/app/build/outputs/apk/debug/app-debug.apk').catch(() => {
+                  console.log('Local APK not found - this is expected if you haven\'t built it yet.');
+                });
+              }}
+            >
+              <Text style={styles.downloadButtonText}>Download APK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       {renderScreen()}
     </SafeAreaProvider>
   );
@@ -414,5 +477,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.light,
+  },
+  webBanner: {
+    backgroundColor: COLORS.primary,
+    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 15,
+  },
+  webBannerText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  bannerButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  installButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  installButtonText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  downloadButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  downloadButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

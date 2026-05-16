@@ -1,31 +1,48 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig: getExpoConfig } = require('expo/metro-config');
+const { mergeConfig, getDefaultConfig: getRNConfig } = require('@react-native/metro-config');
 
-const config = getDefaultConfig(__dirname);
+/**
+ * Metro configuration
+ * https://reactnative.dev/docs/metro
+ *
+ * @type {import('metro-config').MetroConfig}
+ */
+const expoConfig = getExpoConfig(__dirname);
+const rnConfig = getRNConfig(__dirname);
 
-// Enable minification
-config.transformer.minifierConfig = {
-    compress: {
-        drop_console: true, // Remove console.log in production
+const config = {
+  resolver: {
+    // Exclude native folders and problematic deep directories from being watched
+    blockList: [
+      /android\/.*/,
+      /ios\/.*/,
+      /node_modules\/.*\/node_modules\/.*/,
+      /node_modules\/expo-modules-core\/expo-module-gradle-plugin\/.*/,
+    ],
+  },
+  transformer: {
+    minifierConfig: {
+      compress: {
+        drop_console: true,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
-    },
-    mangle: {
+      },
+      mangle: {
         toplevel: true,
-    },
-    output: {
+      },
+      output: {
         comments: false,
+      },
     },
-};
-
-// Optimize asset handling
-config.transformer.assetPlugins = ['expo-asset/tools/hashAssetFiles'];
-
-// Enable tree shaking
-config.transformer.getTransformOptions = async () => ({
-    transform: {
+    assetPlugins: ['expo-asset/tools/hashAssetFiles'],
+    getTransformOptions: async () => ({
+      transform: {
         experimentalImportSupport: false,
         inlineRequires: true,
-    },
-});
+      },
+    }),
+  },
+};
 
-module.exports = config;
+module.exports = mergeConfig(rnConfig, expoConfig, config);
+

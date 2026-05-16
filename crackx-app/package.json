@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
+    "start": "react-native start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
-    "build": "npx expo export",
+    "web": "react-native start --web",
+    "build": "react-native bundle",
     "supabase:setup": "node ../scripts/setup-supabase.js",
     "supabase:migrate": "node ../scripts/migrate-data.js"
   },
@@ -41,6 +41,10 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@react-native-community/cli": "latest",
+    "@react-native/babel-preset": "latest",
+    "@react-native/metro-config": "latest",
+    "@react-native/typescript-config": "latest",
     "@types/node": "^22.13.9",
     "@types/react": "~19.1.0",
     "@types/react-native": "^0.73.0",

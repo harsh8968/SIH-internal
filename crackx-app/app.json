@@ -43,7 +43,16 @@
       "versionCode": 8
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "pwa": {
+        "name": "CrackX - Road Condition Management",
+        "shortName": "CrackX",
+        "themeColor": "#2563eb",
+        "backgroundColor": "#ffffff",
+        "display": "standalone",
+        "orientation": "portrait"
+      }
     },
     "plugins": [
       [
@@ -68,6 +77,10 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "ndkVersion": "26.1.10909125",
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
             "extraProguardRules": "-keep class com.mapbox.** { *; }\n-keep class com.rnmapbox.** { *; }\n-dontwarn com.mapbox.**",
