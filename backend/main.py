@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image
 
+from fastapi.responses import FileResponse
+
 app = FastAPI()
 
 # Enable CORS for mobile/web app access
@@ -43,6 +45,16 @@ async def health_check():
     if detector and detector.model:
         return {"status": "healthy", "message": "Model loaded"}
     return {"status": "unhealthy", "message": "Model not loaded"}
+
+@app.get("/download-apk")
+async def download_apk():
+    apk_path = os.path.join(BASE_DIR, "crackx.apk")
+    if os.path.exists(apk_path):
+        return FileResponse(apk_path, media_type='application/vnd.android.package-archive', filename="crackx.apk")
+    raise HTTPException(
+        status_code=404,
+        detail="APK file not found on the server. Please place your compiled 'crackx.apk' inside the 'backend/' directory to enable downloads."
+    )
 
 @app.post("/api/detect")
 async def detect_damage(image: UploadFile = File(...)):

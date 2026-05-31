@@ -7,6 +7,7 @@ import { initI18n } from './src/i18n';
 import { COLORS } from './src/constants';
 import authService from './src/services/supabaseAuth';
 import locationService from './src/services/location';
+import { BASE_URL } from './src/config/api';
 
 // Screens
 // Screens
@@ -454,11 +455,9 @@ export default function App() {
             <TouchableOpacity 
               style={styles.downloadButton}
               onPress={() => {
-                const apkUrl = 'https://your-website.com/crackx.apk'; // Replace with your real link later
-                alert('In a real deployment, this would download the APK from your server.');
-                // For now, we try to open the local build path if it exists
-                Linking.openURL('/android/app/build/outputs/apk/debug/app-debug.apk').catch(() => {
-                  console.log('Local APK not found - this is expected if you haven\'t built it yet.');
+                const downloadUrl = `${BASE_URL}/download-apk`;
+                Linking.openURL(downloadUrl).catch(() => {
+                  alert('Failed to open APK download link.');
                 });
               }}
             >
