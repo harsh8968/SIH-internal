@@ -59,11 +59,6 @@ def main():
     backend_dir = os.path.join(project_root, "backend")
     frontend_dir = os.path.join(project_root, "crackx-app")
 
-    print("==================================================")
-    print("      🚀 CRACKX ROAD MANAGEMENT SYSTEM            ")
-    print("           Optimized Single Launcher             ")
-    print("==================================================")
-
     # 1. Check & Clean port 5000 (Backend) and port 8081 (Metro Web)
     print("\n🔍 Checking port status...")
     kill_process_on_port(5000)
