@@ -1,0 +1,128 @@
+import { Zone, Contractor } from '../types';
+
+// ... (rest of imports)
+
+// Hardcoded Demo Contractors (Fallbacks for UI testing)
+export const DEMO_CONTRACTORS: Contractor[] = [
+    // Zone 1
+    { id: 'cont_amit', name: 'Amit', agencyName: 'Amit Road Solutions', zone: 'zone1', rating: 4.8 },
+    { id: 'cont_amit_s', name: 'Amit S', agencyName: 'A.S. Infrastructure', zone: 'zone1', rating: 4.5 },
+
+    // Zone 4
+    { id: 'cont_anil', name: 'Anil', agencyName: 'Anil Paving Works', zone: 'zone4', rating: 4.6 },
+    { id: 'cont_ganesh', name: 'Ganesh', agencyName: 'Ganesh Constructions', zone: 'zone4', rating: 4.7 },
+
+    // Zone 8 (Central Solapur)
+    { id: 'cont_prakash', name: 'Prakash', agencyName: 'Prakash Buildtech', zone: 'zone8', rating: 4.9 },
+    { id: 'cont_rahul', name: 'Rahul', agencyName: 'Rahul Maintenance Co', zone: 'zone8', rating: 4.2 }
+];
+
+// Demo Credentials
+export const DEMO_CREDENTIALS = {
+    username: 'demo',
+    password: 'demo1234',
+};
+
+// Hardcoded Permanent Demo Users (Master Fallbacks)
+export const HARDCODED_DEMO_USERS: Record<string, any> = {
+    'admin': { id: 'admin_master', username: 'admin', password: 'admin123', role: 'admin', adminPointsPool: 100000 },
+    'rugved': { id: 'rso_rugved', username: 'rugved', password: 'rugved', role: 'rso', zone: 'zone1', isApproved: true, points: 0 },
+    'deep': { id: 'rso_deep', username: 'deep', password: 'deep', role: 'rso', zone: 'zone4', isApproved: true, points: 0 },
+    'atharva': { id: 'rso_atharva', username: 'atharva', password: 'atharva', role: 'rso', zone: 'zone8', isApproved: true, points: 0 },
+    'arav': { id: 'cit_arav', username: 'arav', password: 'arav', role: 'citizen', isApproved: true },
+    'abbas': { id: 'cit_abbas', username: 'abbas', password: 'abbas', role: 'citizen', isApproved: true },
+    'officer': { id: 'comp_officer', username: 'officer', password: 'officer', role: 'compliance_officer', isApproved: true },
+    // 6 Active Contractors (Pattern: name / name123)
+    'amit': { id: 'cont_amit_user', username: 'amit', password: 'amit123', role: 'contractor', contractorId: 'cont_amit', isApproved: true },
+    'amit_s': { id: 'cont_amit_s_user', username: 'amit_s', password: 'amit_s123', role: 'contractor', contractorId: 'cont_amit_s', isApproved: true },
+    'anil': { id: 'cont_anil_user', username: 'anil', password: 'anil123', role: 'contractor', contractorId: 'cont_anil', isApproved: true },
+    'ganesh': { id: 'cont_ganesh_user', username: 'ganesh', password: 'ganesh123', role: 'contractor', contractorId: 'cont_ganesh', isApproved: true },
+    'prakash': { id: 'cont_prakash_user', username: 'prakash', password: 'prakash123', role: 'contractor', contractorId: 'cont_prakash', isApproved: true },
+    'rahul': { id: 'cont_rahul_user', username: 'rahul', password: 'rahul123', role: 'contractor', contractorId: 'cont_rahul', isApproved: true },
+};
+
+// Zone Definitions for Solapur Municipal Corporation
+export const ZONES: Zone[] = [
+    {
+        id: 'zone1',
+        name: 'Zone 1 - North Solapur',
+        boundaries: [
+            { latitude: 17.6599, longitude: 75.9064 },
+            { latitude: 17.6699, longitude: 75.9164 },
+            { latitude: 17.6799, longitude: 75.9264 },
+            { latitude: 17.6699, longitude: 75.9364 },
+        ],
+    },
+    {
+        id: 'zone4',
+        name: 'Zone 4 - South Solapur',
+        boundaries: [
+            { latitude: 17.6499, longitude: 75.8964 },
+            { latitude: 17.6599, longitude: 75.9064 },
+            { latitude: 17.6699, longitude: 75.9164 },
+            { latitude: 17.6599, longitude: 75.9264 },
+        ],
+    },
+    {
+        id: 'zone8', // CHANGED from zone18
+        name: 'Zone 8 - Central Solapur',
+        boundaries: [
+            { latitude: 17.6399, longitude: 75.8864 },
+            { latitude: 17.6499, longitude: 75.8964 },
+            { latitude: 17.6599, longitude: 75.9064 },
+            { latitude: 17.6499, longitude: 75.9164 },
+        ],
+    },
+];
+
+// Supported Languages
+export const SUPPORTED_LANGUAGES = [
+    { code: 'en', label: 'English' },
+    { code: 'hi', label: 'हिंदी (Hindi)' },
+    { code: 'mr', label: 'मराठी (Marathi)' },
+    { code: 'kn', label: 'ಕನ್ನಡ (Kannada)' },
+];
+
+// Storage Keys
+export const STORAGE_KEYS = {
+    USER: '@crackx_user',
+    REPORTS: '@crackx_reports',
+    LOCATION_PERMISSION: '@crackx_location_permission',
+    LANGUAGE: '@crackx_language',
+    SYNC_QUEUE: '@crackx_sync_queue',
+    REGISTERED_USERS: '@crackx_registered_users',
+    INITIALIZED: '@crackx_initialized',
+};
+
+// Modern Municipal Theme (Orange & White)
+export const COLORS = {
+    primary: '#f97316',    // Vibrant Orange (Safety/Active)
+    secondary: '#fff7ed',  // Light Orange/Cream (Backgrounds)
+    accent: '#ea580c',     // Darker Orange (Borders/Text)
+
+    success: '#10b981',    // Emerald (Success)
+    warning: '#f59e0b',    // Amber (Warning)
+    danger: '#ef4444',     // Red (Error)
+
+    dark: '#1f2937',       // Gray 800 (Main Text)
+    gray: '#6b7280',       // Gray 500 (Subtext)
+    light: '#f9fafb',      // Gray 50 (App Background)
+    white: '#ffffff',
+    border: '#e5e7eb',     // Gray 200
+
+    // Severity Colors
+    severityLow: '#10b981',
+    severityMedium: '#f59e0b',
+    severityHigh: '#ef4444',
+
+    // Gradient Colors
+    gradientStart: '#fb923c',
+    gradientEnd: '#ea580c',
+};
+
+// Severity Thresholds
+export const SEVERITY_THRESHOLDS = {
+    low: 0.3,
+    medium: 0.6,
+    high: 0.8,
+};
