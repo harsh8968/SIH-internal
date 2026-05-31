@@ -125,9 +125,9 @@ class RoadDamageDetector:
                 best_detection = detection
         
         if best_detection:
-            print(f"✅ Final Result: {best_detection['damageType']} ({best_detection['severity']}, {best_detection['confidence']:.2f})")
+            print(f"[RESULT] Final Result: {best_detection['damageType']} ({best_detection['severity']}, {best_detection['confidence']:.2f})")
         else:
-            print("❌ No confident detection found.")
+            print("[INFO] No confident detection found.")
 
         return best_detection
 
