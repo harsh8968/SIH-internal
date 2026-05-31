@@ -4,6 +4,19 @@ import sys
 import time
 import signal
 
+# Reconfigure stdout/stderr to support Unicode characters (like emojis) on Windows terminal environments
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+
 def main():
     project_root = os.path.dirname(os.path.abspath(__file__))
     backend_dir = os.path.join(project_root, "backend")

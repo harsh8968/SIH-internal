@@ -1,7 +1,18 @@
 import traceback
 from PIL import Image
 import io
+import torch
+
+# Monkeypatch torch.load to default to weights_only=False for PyTorch 2.6+ compatibility
+original_torch_load = torch.load
+def safe_torch_load(*args, **kwargs):
+    if 'weights_only' not in kwargs:
+        kwargs['weights_only'] = False
+    return original_torch_load(*args, **kwargs)
+torch.load = safe_torch_load
+
 from ultralytics import YOLO
+
 
 class RoadDamageDetector:
     def __init__(self, model_path):

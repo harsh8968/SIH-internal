@@ -62,7 +62,7 @@ export const API_CONFIG = { ...config, baseUrl: BASE_URL, apiUrl: API_BASE_URL }
 
 // Feature flags
 export const FEATURES = {
-    USE_REAL_AI: true,        // Set to true only if you have a reachable backend server
+    USE_REAL_AI: !!ENV_API_URL,  // Automatically uses real AI if a backend URL is configured, otherwise falls back cleanly to mock AI
     USE_REAL_SYNC: true,      // Use backend sync or local-only
     OFFLINE_FIRST: true,      // Always save locally first
     AUTO_SYNC: false,         // Auto-sync when online (not recommended)
