@@ -111,7 +111,7 @@ export default function App() {
       // Initialize i18n
       await initI18n();
 
-      // Check if user is logged in
+      // Check if user is logged in (keeps latest login)
       const user = await authService.getCurrentUser();
 
       if (user) {
@@ -121,6 +121,7 @@ export default function App() {
         const hasPermission = await locationService.checkPermission();
 
         if (hasPermission) {
+          // Starts from the main dashboard immediately after login
           navigateToHome(user.role);
         } else {
           setAppState('location-permission');

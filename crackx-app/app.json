@@ -68,12 +68,6 @@
         }
       ],
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsImpl": "mapbox"
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "android": {
@@ -83,7 +77,6 @@
             "ndkVersion": "26.1.10909125",
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.mapbox.** { *; }\n-keep class com.rnmapbox.** { *; }\n-dontwarn com.mapbox.**",
             "enableMinifyInReleaseBuilds": true,
             "usesCleartextTraffic": true
           }
