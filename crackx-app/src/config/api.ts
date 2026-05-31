@@ -53,9 +53,16 @@ const config = API_URLS[CURRENT_ENV];
 // Note: process.env.EXPO_PUBLIC_API_URL is the standard way for Expo 49+
 const ENV_API_URL = (process.env as any).EXPO_PUBLIC_API_URL;
 
+let finalBaseUrl = ENV_API_URL || config.baseUrl;
+
+// If running on Android Emulator, automatically map localhost/127.0.0.1 to 10.0.2.2 so it can reach the host machine API
+if (Platform.OS === 'android' && (finalBaseUrl.includes('localhost') || finalBaseUrl.includes('127.0.0.1'))) {
+    finalBaseUrl = finalBaseUrl.replace('localhost', '10.0.2.2').replace('127.0.0.1', '10.0.2.2');
+}
+
 export const BASE_URL = Platform.OS === 'web' && CURRENT_ENV === 'production' && typeof window !== 'undefined'
     ? (window as any).location.origin
-    : (ENV_API_URL || config.baseUrl);
+    : finalBaseUrl;
 
 export const API_BASE_URL = `${BASE_URL}/api`;
 export const API_CONFIG = { ...config, baseUrl: BASE_URL, apiUrl: API_BASE_URL };
