@@ -485,11 +485,21 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.primaryDoneButton} onPress={onClose}>
+                    <TouchableOpacity 
+                        style={styles.primaryDoneButton} 
+                        onPress={onClose}
+                        accessibilityLabel="Go to Home Screen"
+                        accessibilityRole="button"
+                    >
                         <Text style={styles.primaryDoneButtonText}>Go to Home Screen</Text>
                     </TouchableOpacity>
                     
-                    <TouchableOpacity style={styles.secondaryDoneButton} onPress={handleRestartCamera}>
+                    <TouchableOpacity 
+                        style={styles.secondaryDoneButton} 
+                        onPress={handleRestartCamera}
+                        accessibilityLabel="Record Another Video"
+                        accessibilityRole="button"
+                    >
                         <Text style={styles.secondaryDoneButtonText}>Record Another Video</Text>
                     </TouchableOpacity>
                 </View>
@@ -512,11 +522,21 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                             Our AI frame analyzer did not detect any cracks or potholes in this video exceeding the 25% threshold.
                         </Text>
                         
-                        <TouchableOpacity style={styles.primaryDoneButton} onPress={handleRestartCamera}>
+                        <TouchableOpacity 
+                            style={styles.primaryDoneButton} 
+                            onPress={handleRestartCamera}
+                            accessibilityLabel="Retake Video"
+                            accessibilityRole="button"
+                        >
                             <Text style={styles.primaryDoneButtonText}>Retake Video</Text>
                         </TouchableOpacity>
                         
-                        <TouchableOpacity style={styles.secondaryDoneButton} onPress={onClose}>
+                        <TouchableOpacity 
+                            style={styles.secondaryDoneButton} 
+                            onPress={onClose}
+                            accessibilityLabel="Cancel and Go Home"
+                            accessibilityRole="button"
+                        >
                             <Text style={styles.secondaryDoneButtonText}>Cancel & Go Home</Text>
                         </TouchableOpacity>
                     </View>
@@ -531,13 +551,23 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
         return (
             <View style={styles.reviewContainer}>
                 <View style={styles.reviewHeader}>
-                    <TouchableOpacity onPress={handleRestartCamera} style={styles.backButton}>
+                    <TouchableOpacity 
+                        onPress={handleRestartCamera} 
+                        style={styles.backButton}
+                        accessibilityLabel="Back to camera"
+                        accessibilityRole="button"
+                    >
                         <Ionicons name="chevron-back" size={24} color="white" />
                     </TouchableOpacity>
                     <Text style={styles.reviewTitle}>
                         Detection {currentReviewIndex + 1} of {detections.length}
                     </Text>
-                    <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                    <TouchableOpacity 
+                        onPress={onClose} 
+                        style={styles.backButton}
+                        accessibilityLabel="Close review"
+                        accessibilityRole="button"
+                    >
                         <Ionicons name="close" size={24} color="white" />
                     </TouchableOpacity>
                 </View>
@@ -550,6 +580,8 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                                 source={{ uri: currentDetection.frameImage }} 
                                 style={styles.frameImage} 
                                 resizeMode="cover"
+                                accessibilityLabel={`Road damage detection frame showing a ${currentDetection.damageType}`}
+                                accessibilityRole="image"
                             />
                             
                             {/* SVG-like absolute box overlay using percentages */}
@@ -616,19 +648,34 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                 {!isSubmitting && (
                     <View style={styles.reviewFooter}>
                         {/* Reject */}
-                        <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={handleReject}>
+                        <TouchableOpacity 
+                            style={[styles.actionBtn, styles.rejectBtn]} 
+                            onPress={handleReject}
+                            accessibilityLabel={`Reject ${currentDetection.damageType} detection`}
+                            accessibilityRole="button"
+                        >
                             <Ionicons name="close" size={28} color="white" />
                             <Text style={styles.actionBtnText}>Reject</Text>
                         </TouchableOpacity>
 
                         {/* Approve */}
-                        <TouchableOpacity style={[styles.actionBtn, styles.approveBtn]} onPress={handleApprove}>
+                        <TouchableOpacity 
+                            style={[styles.actionBtn, styles.approveBtn]} 
+                            onPress={handleApprove}
+                            accessibilityLabel={`Approve and submit ${currentDetection.damageType} report`}
+                            accessibilityRole="button"
+                        >
                             <Ionicons name="checkmark" size={28} color="white" />
                             <Text style={styles.actionBtnText}>Approve</Text>
                         </TouchableOpacity>
 
                         {/* Auto Submit All */}
-                        <TouchableOpacity style={[styles.actionBtn, styles.autoSubmitBtn]} onPress={handleAutoSubmitAll}>
+                        <TouchableOpacity 
+                            style={[styles.actionBtn, styles.autoSubmitBtn]} 
+                            onPress={handleAutoSubmitAll}
+                            accessibilityLabel="Auto-approve and submit all remaining detections using AI"
+                            accessibilityRole="button"
+                        >
                             <Ionicons name="flash" size={28} color="white" />
                             <Text style={styles.actionBtnText}>Auto AI</Text>
                         </TouchableOpacity>
@@ -666,6 +713,8 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                     autoPlay
                     playsInline
                     muted
+                    title="Live Camera Feed"
+                    aria-label="Live camera feed for road damage detection"
                     style={{
                         position: 'absolute',
                         top: 0,
@@ -691,7 +740,12 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                     backgroundColor: 'transparent'
                 }}>
                     <View style={styles.topBar}>
-                        <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+                        <TouchableOpacity 
+                            onPress={onClose} 
+                            style={styles.iconButton}
+                            accessibilityLabel="Close camera"
+                            accessibilityRole="button"
+                        >
                             <Ionicons name="close-circle" size={40} color="white" />
                         </TouchableOpacity>
                         
@@ -704,7 +758,12 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         
                         {/* Hide flip button during recording to prevent locking errors */}
                         {!isRecording && (
-                            <TouchableOpacity onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} style={styles.iconButton}>
+                            <TouchableOpacity 
+                                onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} 
+                                style={styles.iconButton}
+                                accessibilityLabel="Flip camera"
+                                accessibilityRole="button"
+                            >
                                 <Ionicons name="camera-reverse" size={32} color="white" />
                             </TouchableOpacity>
                         )}
@@ -717,11 +776,23 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         </Text>
 
                         {isRecording ? (
-                            <TouchableOpacity style={styles.stopButton} onPress={handleStopRecording}>
+                            <TouchableOpacity 
+                                style={styles.stopButton} 
+                                onPress={handleStopRecording}
+                                accessibilityLabel="Stop recording"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: true }}
+                            >
                                 <View style={styles.stopInner} />
                             </TouchableOpacity>
                         ) : (
-                            <TouchableOpacity style={styles.recordButton} onPress={handleStartRecording}>
+                            <TouchableOpacity 
+                                style={styles.recordButton} 
+                                onPress={handleStartRecording}
+                                accessibilityLabel="Start recording"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: false }}
+                            >
                                 <View style={styles.recordInner} />
                             </TouchableOpacity>
                         )}
@@ -743,7 +814,12 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                 {/* Clean Camera UI controls */}
                 <View style={styles.controlsContainer}>
                     <View style={styles.topBar}>
-                        <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+                        <TouchableOpacity 
+                            onPress={onClose} 
+                            style={styles.iconButton}
+                            accessibilityLabel="Close camera"
+                            accessibilityRole="button"
+                        >
                             <Ionicons name="close-circle" size={40} color="white" />
                         </TouchableOpacity>
                         
@@ -756,7 +832,12 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         
                         {/* Hide flip button during recording to prevent locking errors */}
                         {!isRecording && (
-                            <TouchableOpacity onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} style={styles.iconButton}>
+                            <TouchableOpacity 
+                                onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} 
+                                style={styles.iconButton}
+                                accessibilityLabel="Flip camera"
+                                accessibilityRole="button"
+                            >
                                 <Ionicons name="camera-reverse" size={32} color="white" />
                             </TouchableOpacity>
                         )}
@@ -769,11 +850,23 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         </Text>
 
                         {isRecording ? (
-                            <TouchableOpacity style={styles.stopButton} onPress={handleStopRecording}>
+                            <TouchableOpacity 
+                                style={styles.stopButton} 
+                                onPress={handleStopRecording}
+                                accessibilityLabel="Stop recording"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: true }}
+                            >
                                 <View style={styles.stopInner} />
                             </TouchableOpacity>
                         ) : (
-                            <TouchableOpacity style={styles.recordButton} onPress={handleStartRecording}>
+                            <TouchableOpacity 
+                                style={styles.recordButton} 
+                                onPress={handleStartRecording}
+                                accessibilityLabel="Start recording"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: false }}
+                            >
                                 <View style={styles.recordInner} />
                             </TouchableOpacity>
                         )}
