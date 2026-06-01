@@ -1,4 +1,4 @@
-import { AIDetectionResult } from '../types';
+import { AIDetectionResult, AIVideoDetectionResult } from '../types';
 import { API_BASE_URL, FEATURES, TIMEOUTS } from '../config/api';
 
 class AIService {

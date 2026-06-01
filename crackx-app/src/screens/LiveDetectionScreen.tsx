@@ -660,7 +660,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                 position: 'relative',
                 backgroundColor: 'black',
                 overflow: 'hidden'
-            }}>
+            } as any}>
                 <video
                     ref={webVideoRef}
                     autoPlay
