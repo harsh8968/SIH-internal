@@ -53,17 +53,21 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     // Refs
     const isRecordingRef = useRef(false);
     const cameraRef = useRef<CameraView>(null);
+    const webVideoRef = useRef<any>(null);
     const webStreamRef = useRef<any>(null);
     const webRecorderRef = useRef<any>(null);
 
-    // Clean up web stream tracks when unmounted
+    // Web Platform: Initialize camera on mount and when facing changes
     useEffect(() => {
+        if (Platform.OS === 'web' && screenState === 'idle') {
+            initWebCamera();
+        }
         return () => {
-            if (webStreamRef.current) {
-                webStreamRef.current.getTracks().forEach((track: any) => track.stop());
+            if (Platform.OS === 'web') {
+                stopWebCamera();
             }
         };
-    }, []);
+    }, [facing, screenState]);
 
     useEffect(() => {
         if (permission && !permission.granted) {
@@ -74,27 +78,65 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
         }
     }, [permission, micPermission]);
 
+    // Web-specific camera helpers
+    const initWebCamera = async () => {
+        try {
+            stopWebCamera(); // Clean up any existing stream first
+
+            console.log(`🎥 Web: Initializing camera. Facing: ${facing}`);
+            const constraints = {
+                video: {
+                    facingMode: facing === 'back' ? 'environment' : 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: true
+            };
+
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (err) {
+                console.log('🎙️ Web: Microphone blocked or unavailable, using video only...');
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: constraints.video
+                });
+            }
+
+            webStreamRef.current = stream;
+            if (webVideoRef.current) {
+                webVideoRef.current.srcObject = stream;
+            }
+        } catch (error) {
+            console.error('❌ Web: Camera access failed:', error);
+            Alert.alert('Camera Access Failed', 'Could not open web camera. Please check permissions.');
+        }
+    };
+
+    const stopWebCamera = () => {
+        if (webStreamRef.current) {
+            console.log('🛑 Web: Stopping active camera stream tracks...');
+            webStreamRef.current.getTracks().forEach((track: any) => track.stop());
+            webStreamRef.current = null;
+        }
+        if (webVideoRef.current) {
+            webVideoRef.current.srcObject = null;
+        }
+    };
+
     const handleStartRecording = async () => {
         // Web Browser Video Recording Flow
         if (Platform.OS === 'web') {
             try {
+                if (!webStreamRef.current) {
+                    throw new Error('Camera stream is not active.');
+                }
+
                 setScreenState('recording');
                 setIsRecording(true);
                 isRecordingRef.current = true;
 
-                console.log('🎥 Web: Requesting camera stream for recording...');
-                // Attempt to request video + audio, fallback to video-only if microphone blocked
-                let stream: MediaStream;
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                } catch (err) {
-                    console.log('🎙️ Web: No microphone or audio blocked, requesting video only...');
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                }
-
-                webStreamRef.current = stream;
-
-                // Find a supported web-compatible video MIME type
+                // Find a supported web-compatible MIME type
                 let options = { mimeType: 'video/webm;codecs=vp9' };
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) {
                     options = { mimeType: 'video/webm;codecs=vp8' };
@@ -107,7 +149,8 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                 }
 
                 console.log(`🎥 Web: Initializing MediaRecorder with MIME: ${options.mimeType}`);
-                const mediaRecorder = new MediaRecorder(stream, options);
+                // Use the exact same stream already active in the preview to prevent lock conflicts!
+                const mediaRecorder = new MediaRecorder(webStreamRef.current, options);
                 webRecorderRef.current = mediaRecorder;
 
                 const chunks: Blob[] = [];
@@ -121,7 +164,6 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                     console.log('🛑 Web: MediaRecorder stopped. Packaging blob...');
                     const blob = new Blob(chunks, { type: options.mimeType });
                     const blobUrl = URL.createObjectURL(blob);
-                    console.log('🔗 Web: Video Blob URL:', blobUrl);
                     handleRecordingFinished(blobUrl);
                 };
 
@@ -177,12 +219,6 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
             if (webRecorderRef.current && isRecording) {
                 console.log('🛑 Web: Stopping MediaRecorder...');
                 webRecorderRef.current.stop();
-                
-                // Stop all camera stream tracks to turn off camera hardware light
-                if (webStreamRef.current) {
-                    webStreamRef.current.getTracks().forEach((track: any) => track.stop());
-                }
-                
                 setIsRecording(false);
                 isRecordingRef.current = false;
             }
@@ -198,6 +234,11 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     const handleRecordingFinished = async (recordedUri?: string) => {
         isRecordingRef.current = false;
         setIsRecording(false);
+
+        // Turn off web camera tracks immediately as we enter processing state
+        if (Platform.OS === 'web') {
+            stopWebCamera();
+        }
 
         if (!recordedUri) {
             setMode('picture');
@@ -610,6 +651,62 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
         );
     }
 
+    // Web-specific default camera screen using pure HTML5 <video> tag
+    if (Platform.OS === 'web') {
+        return (
+            <View style={styles.container}>
+                <video
+                    ref={webVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={StyleSheet.absoluteFillObject}
+                />
+                
+                {/* Camera UI controls over top */}
+                <View style={styles.controlsContainer}>
+                    <View style={styles.topBar}>
+                        <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+                            <Ionicons name="close-circle" size={40} color="white" />
+                        </TouchableOpacity>
+                        
+                        <View style={styles.statusBadge}>
+                            <View style={[styles.statusDot, { backgroundColor: isRecording ? '#ef4444' : '#22c55e' }]} />
+                            <Text style={styles.statusText}>
+                                {isRecording ? 'RECORDING VIDEO' : 'LIVE ANALYSIS'}
+                            </Text>
+                        </View>
+                        
+                        {/* Hide flip button during recording to prevent locking errors */}
+                        {!isRecording && (
+                            <TouchableOpacity onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} style={styles.iconButton}>
+                                <Ionicons name="camera-reverse" size={32} color="white" />
+                            </TouchableOpacity>
+                        )}
+                        {isRecording && <View style={{ width: 48 }} />}
+                    </View>
+
+                    <View style={styles.bottomBar}>
+                        <Text style={styles.hintText}>
+                            {isRecording ? 'Move slowly to capture road conditions...' : 'Press record to capture live road cracks/potholes'}
+                        </Text>
+
+                        {isRecording ? (
+                            <TouchableOpacity style={styles.stopButton} onPress={handleStopRecording}>
+                                <View style={styles.stopInner} />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity style={styles.recordButton} onPress={handleStartRecording}>
+                                <View style={styles.recordInner} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    // Native Mobile Camera View (Android/iOS)
     return (
         <View style={styles.container}>
             <CameraView
@@ -632,9 +729,13 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                             </Text>
                         </View>
                         
-                        <TouchableOpacity onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} style={styles.iconButton}>
-                            <Ionicons name="camera-reverse" size={32} color="white" />
-                        </TouchableOpacity>
+                        {/* Hide flip button during recording to prevent locking errors */}
+                        {!isRecording && (
+                            <TouchableOpacity onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))} style={styles.iconButton}>
+                                <Ionicons name="camera-reverse" size={32} color="white" />
+                            </TouchableOpacity>
+                        )}
+                        {isRecording && <View style={{ width: 48 }} />}
                     </View>
 
                     <View style={styles.bottomBar}>
