@@ -654,17 +654,42 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     // Web-specific default camera screen using pure HTML5 <video> tag
     if (Platform.OS === 'web') {
         return (
-            <View style={styles.container}>
+            <View style={{
+                width: '100vw',
+                height: '100vh',
+                position: 'relative',
+                backgroundColor: 'black',
+                overflow: 'hidden'
+            }}>
                 <video
                     ref={webVideoRef}
                     autoPlay
                     playsInline
                     muted
-                    style={StyleSheet.absoluteFillObject}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 1
+                    }}
                 />
                 
                 {/* Camera UI controls over top */}
-                <View style={styles.controlsContainer}>
+                <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    justifyContent: 'space-between',
+                    padding: 20,
+                    paddingTop: 50,
+                    zIndex: 10,
+                    backgroundColor: 'transparent'
+                }}>
                     <View style={styles.topBar}>
                         <TouchableOpacity onPress={onClose} style={styles.iconButton}>
                             <Ionicons name="close-circle" size={40} color="white" />
@@ -673,7 +698,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         <View style={styles.statusBadge}>
                             <View style={[styles.statusDot, { backgroundColor: isRecording ? '#ef4444' : '#22c55e' }]} />
                             <Text style={styles.statusText}>
-                                {isRecording ? 'RECORDING VIDEO' : 'LIVE ANALYSIS'}
+                                {isRecording ? 'RECORDING VIDEO' : 'CAMERA READY'}
                             </Text>
                         </View>
                         
@@ -688,7 +713,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
 
                     <View style={styles.bottomBar}>
                         <Text style={styles.hintText}>
-                            {isRecording ? 'Move slowly to capture road conditions...' : 'Press record to capture live road cracks/potholes'}
+                            {isRecording ? 'Tap the square button below to STOP and analyze' : 'Tap the red button below to START recording'}
                         </Text>
 
                         {isRecording ? (
@@ -725,7 +750,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
                         <View style={styles.statusBadge}>
                             <View style={[styles.statusDot, { backgroundColor: isRecording ? '#ef4444' : '#22c55e' }]} />
                             <Text style={styles.statusText}>
-                                {isRecording ? 'RECORDING VIDEO' : 'LIVE ANALYSIS'}
+                                {isRecording ? 'RECORDING VIDEO' : 'CAMERA READY'}
                             </Text>
                         </View>
                         
@@ -740,7 +765,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
 
                     <View style={styles.bottomBar}>
                         <Text style={styles.hintText}>
-                            {isRecording ? 'Move slowly to capture road conditions...' : 'Press record to capture live road cracks/potholes'}
+                            {isRecording ? 'Tap the square button below to STOP and analyze' : 'Tap the red button below to START recording'}
                         </Text>
 
                         {isRecording ? (
