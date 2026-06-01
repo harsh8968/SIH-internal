@@ -15,9 +15,10 @@ from ultralytics import YOLO
 
 
 class RoadDamageDetector:
-    def __init__(self, model_path):
+    def __init__(self, model_path, conf_threshold=0.25):
         self.model_path = model_path
         self.model = None
+        self.conf_threshold = conf_threshold
         # Default severity mapping
         self.default_severity_map = {
             'crack': 'low',
@@ -65,9 +66,8 @@ class RoadDamageDetector:
                 print(f"Warning: Failed to save debug image: {e}")
 
             # Run inference
-            print(f"Running inference on image of size {image.size}...")
-            # Low confidence to catch everything
-            results = self.model(image, conf=0.01, verbose=True) 
+            print(f"Running inference on image of size {image.size} with confidence {self.conf_threshold}...")
+            results = self.model(image, conf=self.conf_threshold, verbose=True) 
             
             if not results:
                 print("Results list is empty.")
@@ -86,6 +86,9 @@ class RoadDamageDetector:
 
         for box in result.boxes:
             score = float(box.conf[0])
+            if score < self.conf_threshold:
+                continue
+                
             class_id = int(box.cls[0])
             if hasattr(result, 'names'):
                 class_name = result.names[class_id]

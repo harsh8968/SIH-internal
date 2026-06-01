@@ -52,6 +52,21 @@ export interface AIDetectionResult {
   };
 }
 
+export interface AIVideoDetectionResult {
+  frameIndex: number;
+  timestamp: string;
+  damageType: DamageType;
+  confidence: number;
+  severity: SeverityLevel;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  frameImage: string; // Base64 JPEG data URL
+}
+
 export interface Report {
   id: string;
   citizenId: string;

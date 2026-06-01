@@ -66,10 +66,106 @@ class AIService {
                 };
             }
         } catch (error) {
-            console.error('AI detection error (falling back to mock):', error);
-            // Fallback to mock detection so the app is usable without backend
+            console.error('AI detection error:', error);
+            // If we are expecting real AI, do not return random false-positive mocks
+            if (FEATURES.USE_REAL_AI) {
+                return {
+                    damageType: 'other',
+                    confidence: 0,
+                    severity: 'low',
+                    boundingBox: { x: 0, y: 0, width: 0, height: 0 }
+                };
+            }
             return this.mockDetection();
         }
+    }
+
+    /**
+     * Real AI video detection using backend YOLO model on each frame
+     */
+    async detectVideo(videoUri: string): Promise<AIVideoDetectionResult[]> {
+        if (!FEATURES.USE_REAL_AI) {
+            console.log('🤖 AI Video Detection: using mock mode (Real AI disabled)');
+            return this.mockVideoDetections();
+        }
+
+        try {
+            // Create FormData to send video
+            const formData = new FormData();
+
+            // Convert video URI to blob
+            const uriToBlob = (uri: string): Promise<Blob> => {
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.onload = function () {
+                        resolve(xhr.response);
+                    };
+                    xhr.onerror = function (e) {
+                        console.error('❌ uriToBlob for video failed:', e);
+                        reject(new Error('uriToBlob for video failed'));
+                    };
+                    xhr.responseType = 'blob';
+                    xhr.open('GET', uri, true);
+                    xhr.send(null);
+                });
+            };
+
+            const blob = await uriToBlob(videoUri);
+
+            // Append video to form data
+            formData.append('video', blob, 'video.mp4');
+
+            console.log(`📤 Sending video to backend for frame-by-frame analysis: ${API_BASE_URL}/detect-video`);
+
+            // Send to backend API
+            const apiResponse = await fetch(`${API_BASE_URL}/detect-video`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!apiResponse.ok) {
+                throw new Error('AI video detection failed');
+            }
+
+            const data = await apiResponse.json();
+
+            if (data.success && data.detections) {
+                return data.detections;
+            } else {
+                console.log('AI Video: No significant damage detected in any frames.');
+                return [];
+            }
+        } catch (error) {
+            console.error('AI video detection error:', error);
+            // Return empty list on failure when real AI is active
+            return [];
+        }
+    }
+
+    /**
+     * Mock video detection as fallback in mock mode
+     */
+    private mockVideoDetections(): AIVideoDetectionResult[] {
+        return [
+            {
+                frameIndex: 3,
+                timestamp: "00:03",
+                damageType: "pothole",
+                confidence: 0.82,
+                severity: "high",
+                boundingBox: { x: 0.15, y: 0.2, width: 0.35, height: 0.3 },
+                frameImage: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            },
+            {
+                frameIndex: 7,
+                timestamp: "00:07",
+                damageType: "crack",
+                confidence: 0.68,
+                severity: "medium",
+                boundingBox: { x: 0.4, y: 0.5, width: 0.25, height: 0.2 },
+                frameImage: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            }
+        ];
     }
 
     /**
