@@ -21,6 +21,8 @@ export const uploadVideoToSupabase = async (
         // Basic extension check
         if (Platform.OS === 'ios' && uri.includes('.mov')) {
             fileExt = 'mov';
+        } else if (Platform.OS === 'web') {
+            fileExt = 'webm';
         }
 
         const fileName = `${reportId}_${timestamp}.${fileExt}`;

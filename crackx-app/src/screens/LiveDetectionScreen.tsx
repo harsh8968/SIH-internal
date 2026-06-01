@@ -39,7 +39,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     const [mode, setMode] = useState<'picture' | 'video'>('picture');
     const [isRecording, setIsRecording] = useState(false);
 
-    // New State Machine for Video Analysis & Review UI
+    // State Machine for Video Analysis & Review UI
     const [screenState, setScreenState] = useState<ScreenState>('idle');
     const [videoUri, setVideoUri] = useState<string>('');
     const [videoUrl, setVideoUrl] = useState<string>('');
@@ -53,6 +53,17 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     // Refs
     const isRecordingRef = useRef(false);
     const cameraRef = useRef<CameraView>(null);
+    const webStreamRef = useRef<any>(null);
+    const webRecorderRef = useRef<any>(null);
+
+    // Clean up web stream tracks when unmounted
+    useEffect(() => {
+        return () => {
+            if (webStreamRef.current) {
+                webStreamRef.current.getTracks().forEach((track: any) => track.stop());
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (permission && !permission.granted) {
@@ -64,14 +75,71 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     }, [permission, micPermission]);
 
     const handleStartRecording = async () => {
-        if (Platform.OS === ('web' as any)) {
-            window.alert('Video recording is not currently supported on the Web version. Please use the mobile app for this feature.');
+        // Web Browser Video Recording Flow
+        if (Platform.OS === 'web') {
+            try {
+                setScreenState('recording');
+                setIsRecording(true);
+                isRecordingRef.current = true;
+
+                console.log('🎥 Web: Requesting camera stream for recording...');
+                // Attempt to request video + audio, fallback to video-only if microphone blocked
+                let stream: MediaStream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                } catch (err) {
+                    console.log('🎙️ Web: No microphone or audio blocked, requesting video only...');
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                }
+
+                webStreamRef.current = stream;
+
+                // Find a supported web-compatible video MIME type
+                let options = { mimeType: 'video/webm;codecs=vp9' };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/webm;codecs=vp8' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' };
+                        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                            options = { mimeType: 'video/mp4' }; // Safari fallback
+                        }
+                    }
+                }
+
+                console.log(`🎥 Web: Initializing MediaRecorder with MIME: ${options.mimeType}`);
+                const mediaRecorder = new MediaRecorder(stream, options);
+                webRecorderRef.current = mediaRecorder;
+
+                const chunks: Blob[] = [];
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    console.log('🛑 Web: MediaRecorder stopped. Packaging blob...');
+                    const blob = new Blob(chunks, { type: options.mimeType });
+                    const blobUrl = URL.createObjectURL(blob);
+                    console.log('🔗 Web: Video Blob URL:', blobUrl);
+                    handleRecordingFinished(blobUrl);
+                };
+
+                mediaRecorder.start();
+                console.log('🎥 Web: MediaRecorder started successfully!');
+            } catch (error: any) {
+                console.error('🎥 Web: Start recording error:', error);
+                Alert.alert('Recording Failed', `Could not start web video recording: ${error.message || error}`);
+                setIsRecording(false);
+                isRecordingRef.current = false;
+                setScreenState('idle');
+            }
             return;
         }
 
+        // Native Mobile Video Recording Flow
         if (cameraRef.current) {
             try {
-                // Switch to video mode and recording state
                 setMode('video');
                 setScreenState('recording');
 
@@ -104,6 +172,24 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
     };
 
     const handleStopRecording = () => {
+        // Web Browser Video Stopping Flow
+        if (Platform.OS === 'web') {
+            if (webRecorderRef.current && isRecording) {
+                console.log('🛑 Web: Stopping MediaRecorder...');
+                webRecorderRef.current.stop();
+                
+                // Stop all camera stream tracks to turn off camera hardware light
+                if (webStreamRef.current) {
+                    webStreamRef.current.getTracks().forEach((track: any) => track.stop());
+                }
+                
+                setIsRecording(false);
+                isRecordingRef.current = false;
+            }
+            return;
+        }
+
+        // Native Mobile Video Stopping Flow
         if (cameraRef.current && isRecording) {
             cameraRef.current.stopRecording();
         }
@@ -125,7 +211,7 @@ export default function LiveDetectionScreen({ onCapture, onClose }: LiveDetectio
         setSubmitProgress('Uploading and analyzing video...');
 
         try {
-            // 1. Fetch Location and User in parallel
+            // 1. Fetch Location and User
             console.log('[LiveDetection] 📍 Fetching user and location...');
             const user = await authService.getCurrentUser();
             if (!user) throw new Error('User not logged in');
