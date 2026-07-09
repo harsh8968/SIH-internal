@@ -15,7 +15,7 @@ import { COLORS, ZONES } from '../constants';
 import { Report } from '../types';
 import storageService from '../services/supabaseStorage';
 import authService from '../services/supabaseAuth';
-import { calculateRoadHealthIndex, formatDate, getSeverityColor } from '../utils';
+import { calculateRoadHealthIndex, formatDate, getSeverityColor, isLocalMobileUri } from '../utils';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface AdminHomeScreenProps {
@@ -26,6 +26,7 @@ interface AdminHomeScreenProps {
 export default function AdminHomeScreen({ onNavigate, onLogout }: AdminHomeScreenProps) {
     const { t } = useTranslation();
     const [reports, setReports] = useState<Report[]>([]);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
     const [zoneStats, setZoneStats] = useState<any>({});
     const [pendingRSOs, setPendingRSOs] = useState<any[]>([]);
     const [rsoMap, setRsoMap] = useState<Record<string, string>>({});
@@ -300,16 +301,24 @@ export default function AdminHomeScreen({ onNavigate, onLogout }: AdminHomeScree
                                 {/* Photo Thumbnail */}
                                 <View style={styles.imageContainer}>
                                     {report.photoUri ? (
-                                        (Platform.OS === 'web' && report.photoUri.startsWith('file://')) ? (
+                                        (Platform.OS === 'web' && isLocalMobileUri(report.photoUri)) ? (
+                                            <View style={styles.placeholderContainer}>
+                                                <Ionicons name="phone-portrait-outline" size={32} color={COLORS.gray} />
+                                                <Text style={styles.placeholderText}>Image stored locally (Legacy)</Text>
+                                            </View>
+                                        ) : imageErrors[report.id] ? (
                                             <View style={styles.placeholderContainer}>
                                                 <Ionicons name="image-outline" size={32} color={COLORS.gray} />
-                                                <Text style={styles.placeholderText}>Image stored locally (Legacy)</Text>
+                                                <Text style={styles.placeholderText}>Image not available</Text>
                                             </View>
                                         ) : (
                                             <Image
                                                 source={{ uri: report.photoUri }}
                                                 style={styles.reportImage}
                                                 resizeMode="cover"
+                                                onError={() => {
+                                                    setImageErrors(prev => ({ ...prev, [report.id]: true }));
+                                                }}
                                             />
                                         )
                                     ) : (
@@ -328,16 +337,24 @@ export default function AdminHomeScreen({ onNavigate, onLogout }: AdminHomeScree
                                             <Text style={styles.repairDate}>{formatDate(report.repairCompletedAt || report.updatedAt)}</Text>
                                         </View>
 
-                                        {(Platform.OS === 'web' && report.repairProofUri.startsWith('file://')) ? (
+                                        {(Platform.OS === 'web' && isLocalMobileUri(report.repairProofUri)) ? (
                                             <View style={[styles.placeholderContainer, { height: 150, backgroundColor: '#f0fdf4', borderColor: COLORS.success, borderWidth: 1 }]}>
                                                 <Ionicons name="phone-portrait-outline" size={32} color={COLORS.success} />
                                                 <Text style={[styles.placeholderText, { color: COLORS.success }]}>Proof stored locally (Legacy)</Text>
+                                            </View>
+                                        ) : imageErrors[report.id + '_proof'] ? (
+                                            <View style={[styles.placeholderContainer, { height: 150, backgroundColor: '#e2e8f0', borderColor: COLORS.gray, borderWidth: 1 }]}>
+                                                <Ionicons name="image-outline" size={32} color={COLORS.gray} />
+                                                <Text style={[styles.placeholderText, { color: COLORS.gray }]}>Proof image not available</Text>
                                             </View>
                                         ) : (
                                             <Image
                                                 source={{ uri: report.repairProofUri }}
                                                 style={styles.repairImage}
                                                 resizeMode="cover"
+                                                onError={() => {
+                                                    setImageErrors(prev => ({ ...prev, [report.id + '_proof']: true }));
+                                                }}
                                             />
                                         )}
 

@@ -15,7 +15,7 @@ import { COLORS } from '../constants';
 import { Report } from '../types';
 import storageService from '../services/supabaseStorage';
 import authService from '../services/supabaseAuth';
-import { formatDate, getSeverityColor } from '../utils';
+import { formatDate, getSeverityColor, isLocalMobileUri } from '../utils';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface MyReportsScreenProps {
@@ -29,6 +29,7 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
     const [reports, setReports] = useState<Report[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [feedbackText, setFeedbackText] = useState<{ [key: string]: string }>({});
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         loadReports();
@@ -139,16 +140,24 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
                             {/* Photo */}
                             {report.photoUri && (
                                 <View style={styles.imageContainer}>
-                                    {Platform.OS === 'web' && report.photoUri.startsWith('file://') ? (
-                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, backgroundColor: '#e2e8f0', borderRadius: 12 }}>
+                                    {Platform.OS === 'web' && isLocalMobileUri(report.photoUri) ? (
+                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, backgroundColor: '#e2e8f0', borderRadius: 12, width: '100%' }}>
                                             <Ionicons name="phone-portrait-outline" size={40} color={COLORS.gray} />
                                             <Text style={{ fontSize: 12, color: COLORS.gray, marginTop: 8 }}>Image only available on Mobile</Text>
+                                        </View>
+                                    ) : imageErrors[report.id] ? (
+                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, backgroundColor: '#e2e8f0', borderRadius: 12, width: '100%' }}>
+                                            <Ionicons name="image-outline" size={40} color={COLORS.gray} />
+                                            <Text style={{ fontSize: 12, color: COLORS.gray, marginTop: 8 }}>Image not available</Text>
                                         </View>
                                     ) : (
                                         <Image
                                             source={{ uri: report.photoUri }}
                                             style={styles.reportImage}
                                             resizeMode="cover"
+                                            onError={() => {
+                                                setImageErrors(prev => ({ ...prev, [report.id]: true }));
+                                            }}
                                         />
                                     )}
                                 </View>
@@ -235,7 +244,25 @@ export default function MyReportsScreen({ onNavigate, onBack, onLogout }: MyRepo
                                             {report.repairCompletedAt ? formatDate(report.repairCompletedAt) : ''}
                                         </Text>
                                     </View>
-                                    <Image source={{ uri: report.repairProofUri }} style={styles.repairImage} />
+                                    {Platform.OS === 'web' && isLocalMobileUri(report.repairProofUri) ? (
+                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, backgroundColor: '#e2e8f0', borderRadius: 12, borderWidth: 2, borderColor: COLORS.success, width: '100%' }}>
+                                            <Ionicons name="phone-portrait-outline" size={40} color={COLORS.success} />
+                                            <Text style={{ fontSize: 12, color: COLORS.success, marginTop: 8 }}>Repair proof only on Mobile</Text>
+                                        </View>
+                                    ) : imageErrors[report.id + '_proof'] ? (
+                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, backgroundColor: '#e2e8f0', borderRadius: 12, borderWidth: 2, borderColor: COLORS.success, width: '100%' }}>
+                                            <Ionicons name="image-outline" size={40} color={COLORS.success} />
+                                            <Text style={{ fontSize: 12, color: COLORS.success, marginTop: 8 }}>Repair proof not available</Text>
+                                        </View>
+                                    ) : (
+                                        <Image
+                                            source={{ uri: report.repairProofUri }}
+                                            style={styles.repairImage}
+                                            onError={() => {
+                                                setImageErrors(prev => ({ ...prev, [report.id + '_proof']: true }));
+                                            }}
+                                        />
+                                    )}
 
                                     {/* Citizen Feedback Section */}
                                     <View style={styles.feedbackSection}>
@@ -383,7 +410,6 @@ const styles = StyleSheet.create({
     reportImage: {
         width: '100%',
         height: '100%',
-        position: 'absolute',
     },
     reportHeader: {
         flexDirection: 'row',

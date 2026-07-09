@@ -1,3 +1,5 @@
+import { SUPABASE_URL } from '../config/supabase';
+
 /**
  * Network Connectivity Utilities
  * Checks internet connection before making API calls
@@ -9,11 +11,12 @@
  */
 export const checkInternetConnection = async (): Promise<boolean> => {
     try {
+        const url = SUPABASE_URL;
         // Try to reach Supabase endpoint
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        const response = await fetch('https://fqovaczstxiulquorabv.supabase.co/rest/v1/', {
+        const response = await fetch(`${url}/rest/v1/`, {
             method: 'HEAD',
             signal: controller.signal,
         });

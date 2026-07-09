@@ -18,6 +18,7 @@ import { Report, User } from '../types';
 import storageService from '../services/supabaseStorage';
 import authService from '../services/supabaseAuth';
 import DashboardLayout from '../components/DashboardLayout';
+import { isLocalMobileUri } from '../utils';
 
 interface CitizenHomeScreenProps {
     onNavigate: (screen: string) => void;
@@ -26,8 +27,9 @@ interface CitizenHomeScreenProps {
 
 export default function CitizenHomeScreen({ onNavigate, onLogout }: CitizenHomeScreenProps) {
     const { t } = useTranslation();
-    const [reports, setReports] = useState<Report[]>([]);
     const [user, setUser] = useState<User | null>(null);
+    const [reports, setReports] = useState<Report[]>([]);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
     const [users, setUsers] = useState<User[]>([]);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -198,11 +200,26 @@ export default function CitizenHomeScreen({ onNavigate, onLogout }: CitizenHomeS
                                             </View>
                                         </View>
                                     ) : (
-                                        <Image
-                                            source={{ uri: report.photoUri }}
-                                            style={styles.repairImage}
-                                            resizeMode="cover"
-                                        />
+                                        Platform.OS === 'web' && isLocalMobileUri(report.photoUri) ? (
+                                            <View style={[styles.repairImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                                                <Ionicons name="phone-portrait-outline" size={32} color={COLORS.gray} />
+                                                <Text style={{ fontSize: 11, color: COLORS.gray, marginTop: 4 }}>Image only on Mobile</Text>
+                                            </View>
+                                        ) : imageErrors[report.id] ? (
+                                            <View style={[styles.repairImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                                                <Ionicons name="image-outline" size={32} color={COLORS.gray} />
+                                                <Text style={{ fontSize: 11, color: COLORS.gray, marginTop: 4 }}>Image not available</Text>
+                                            </View>
+                                        ) : (
+                                            <Image
+                                                source={{ uri: report.photoUri }}
+                                                style={styles.repairImage}
+                                                resizeMode="cover"
+                                                onError={() => {
+                                                    setImageErrors(prev => ({ ...prev, [report.id]: true }));
+                                                }}
+                                            />
+                                        )
                                     )}
                                 </View>
 
@@ -210,11 +227,26 @@ export default function CitizenHomeScreen({ onNavigate, onLogout }: CitizenHomeS
                                 {report.status === 'completed' && report.repairProofUri && (
                                     <View style={styles.repairProofContainer}>
                                         <Text style={styles.repairLabel}>{t('repair_complete_label')}</Text>
-                                        <Image
-                                            source={{ uri: report.repairProofUri }}
-                                            style={styles.repairImage}
-                                            resizeMode="cover"
-                                        />
+                                        {Platform.OS === 'web' && isLocalMobileUri(report.repairProofUri) ? (
+                                            <View style={[styles.repairImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: COLORS.success, borderStyle: 'dashed' }]}>
+                                                <Ionicons name="phone-portrait-outline" size={32} color={COLORS.success} />
+                                                <Text style={{ fontSize: 11, color: COLORS.success, marginTop: 4 }}>Proof only on Mobile</Text>
+                                            </View>
+                                        ) : imageErrors[report.id + '_proof'] ? (
+                                            <View style={[styles.repairImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                                                <Ionicons name="image-outline" size={32} color={COLORS.gray} />
+                                                <Text style={{ fontSize: 11, color: COLORS.gray, marginTop: 4 }}>Proof not available</Text>
+                                            </View>
+                                        ) : (
+                                            <Image
+                                                source={{ uri: report.repairProofUri }}
+                                                style={styles.repairImage}
+                                                resizeMode="cover"
+                                                onError={() => {
+                                                    setImageErrors(prev => ({ ...prev, [report.id + '_proof']: true }));
+                                                }}
+                                            />
+                                        )}
                                     </View>
                                 )}
 

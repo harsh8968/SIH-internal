@@ -499,7 +499,7 @@ class SupabaseStorageService {
             }));
         } catch (error) {
             console.error('[Supabase] Error fetching reports by citizen:', error);
-            const reports = await this.getReports();
+            const reports = await this.getLocalReports();
             return reports.filter(r => r.citizenId === citizenId);
         }
     }

@@ -104,3 +104,17 @@ export const isValidPhone = (phone: string): boolean => {
     const phoneRegex = /^[6-9]\d{9}$/;
     return phoneRegex.test(phone);
 };
+
+/**
+ * Check if the URI is a local mobile path (e.g. from gallery or camera cache)
+ */
+export const isLocalMobileUri = (uri?: string): boolean => {
+    if (!uri) return false;
+    return (
+        uri.startsWith('file://') ||
+        uri.startsWith('content://') ||
+        uri.startsWith('ph://') ||
+        uri.startsWith('assets-library://')
+    );
+};
+

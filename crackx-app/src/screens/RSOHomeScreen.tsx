@@ -17,7 +17,7 @@ import { COLORS } from '../constants';
 import { Report, User, Contractor, Department } from '../types';
 import storageService from '../services/supabaseStorage';
 import authService from '../services/supabaseAuth';
-import { formatDate, getSeverityColor } from '../utils';
+import { formatDate, getSeverityColor, isLocalMobileUri } from '../utils';
 import * as ImagePicker from 'expo-image-picker';
 import notificationService from '../services/notifications';
 import { uploadImageToSupabase } from '../services/imageUpload';
@@ -32,6 +32,7 @@ interface RSOHomeScreenProps {
 export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: RSOHomeScreenProps) {
     const { t } = useTranslation();
     const [reports, setReports] = useState<Report[]>([]);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
     const [sortBySeverity, setSortBySeverity] = useState(false);
     const [userZone, setUserZone] = useState<string>('');
     const [user, setUser] = useState<User | null>(null);
@@ -427,16 +428,24 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                                     {/* Report Photo */}
                                     {report.photoUri && (
                                         <View style={styles.imageContainer}>
-                                            {Platform.OS === 'web' && report.photoUri.startsWith('file://') ? (
-                                                <View style={{ alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                                    <Ionicons name="phone-portrait-outline" size={48} color={COLORS.gray} />
-                                                    <Text style={{ color: COLORS.gray, marginTop: 8 }}>{t('image_only_mobile')}</Text>
+                                            {Platform.OS === 'web' && isLocalMobileUri(report.photoUri) ? (
+                                                <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, width: '100%', backgroundColor: '#e2e8f0', borderRadius: 12 }}>
+                                                    <Ionicons name="phone-portrait-outline" size={40} color={COLORS.gray} />
+                                                    <Text style={{ fontSize: 12, color: COLORS.gray, marginTop: 8 }}>{t('image_only_mobile')}</Text>
+                                                </View>
+                                            ) : imageErrors[report.id] ? (
+                                                <View style={{ alignItems: 'center', justifyContent: 'center', height: 200, width: '100%', backgroundColor: '#e2e8f0', borderRadius: 12 }}>
+                                                    <Ionicons name="image-outline" size={40} color={COLORS.gray} />
+                                                    <Text style={{ fontSize: 12, color: COLORS.gray, marginTop: 8 }}>Image not available</Text>
                                                 </View>
                                             ) : (
                                                 <Image
                                                     source={{ uri: report.photoUri }}
                                                     style={styles.reportImage}
                                                     resizeMode="cover"
+                                                    onError={() => {
+                                                        setImageErrors(prev => ({ ...prev, [report.id]: true }));
+                                                    }}
                                                 />
                                             )}
                                         </View>
@@ -514,13 +523,28 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
 
                                             {report.repairProofUri ? (
                                                 <TouchableOpacity
-                                                    style={{ marginBottom: 12, alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 8, borderStyle: 'dashed', borderWidth: 1, borderColor: '#ccc' }}
+                                                    style={{ marginBottom: 12, alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 8, borderStyle: 'dashed', borderWidth: 1, borderColor: '#ccc', width: '100%' }}
                                                     onPress={() => onReviewReport(report)}
                                                 >
-                                                    <Image
-                                                        source={{ uri: report.repairProofUri }}
-                                                        style={{ width: '100%', height: 180, borderRadius: 8, resizeMode: 'cover' }}
-                                                    />
+                                                    {Platform.OS === 'web' && isLocalMobileUri(report.repairProofUri) ? (
+                                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 180, width: '100%', backgroundColor: '#e2e8f0', borderRadius: 8 }}>
+                                                            <Ionicons name="phone-portrait-outline" size={32} color={COLORS.gray} />
+                                                            <Text style={{ fontSize: 11, color: COLORS.gray, marginTop: 4 }}>Proof only on Mobile</Text>
+                                                        </View>
+                                                    ) : imageErrors[report.id + '_proof'] ? (
+                                                        <View style={{ alignItems: 'center', justifyContent: 'center', height: 180, width: '100%', backgroundColor: '#e2e8f0', borderRadius: 8 }}>
+                                                            <Ionicons name="image-outline" size={32} color={COLORS.gray} />
+                                                            <Text style={{ fontSize: 11, color: COLORS.gray, marginTop: 4 }}>Proof image not available</Text>
+                                                        </View>
+                                                    ) : (
+                                                        <Image
+                                                            source={{ uri: report.repairProofUri }}
+                                                            style={{ width: '100%', height: 180, borderRadius: 8, resizeMode: 'cover' }}
+                                                            onError={() => {
+                                                                setImageErrors(prev => ({ ...prev, [report.id + '_proof']: true }));
+                                                            }}
+                                                        />
+                                                    )}
                                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
                                                         <Text style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: 16 }}>🔍 Review Details</Text>
                                                     </View>
@@ -543,10 +567,25 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                                         <View style={{ marginTop: 12, padding: 12, backgroundColor: '#f0fdf4', borderRadius: 8, borderLeftWidth: 4, borderLeftColor: COLORS.success }}>
                                             <Text style={{ fontWeight: 'bold', color: '#166534', marginBottom: 8 }}>✅ Completed Repair Proof:</Text>
                                             <TouchableOpacity onPress={() => openProofModal(report.repairProofUri!)}>
-                                                <Image
-                                                    source={{ uri: report.repairProofUri }}
-                                                    style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#ddd' }}
-                                                />
+                                                {Platform.OS === 'web' && isLocalMobileUri(report.repairProofUri) ? (
+                                                    <View style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
+                                                        <Ionicons name="phone-portrait-outline" size={24} color={COLORS.success} />
+                                                        <Text style={{ fontSize: 8, color: COLORS.success, marginTop: 2, textAlign: 'center' }}>On Mobile</Text>
+                                                    </View>
+                                                ) : imageErrors[report.id + '_completed_proof'] ? (
+                                                    <View style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
+                                                        <Ionicons name="image-outline" size={24} color={COLORS.success} />
+                                                        <Text style={{ fontSize: 8, color: COLORS.success, marginTop: 2, textAlign: 'center' }}>Unavailable</Text>
+                                                    </View>
+                                                ) : (
+                                                    <Image
+                                                        source={{ uri: report.repairProofUri }}
+                                                        style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#ddd' }}
+                                                        onError={() => {
+                                                            setImageErrors(prev => ({ ...prev, [report.id + '_completed_proof']: true }));
+                                                        }}
+                                                    />
+                                                )}
                                             </TouchableOpacity>
                                         </View>
                                     )}
@@ -866,7 +905,6 @@ const styles = StyleSheet.create({
     reportImage: {
         width: '100%',
         height: '100%',
-        position: 'absolute',
     },
     reportHeader: {
         flexDirection: 'row',

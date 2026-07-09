@@ -21,6 +21,7 @@ import authService from '../services/supabaseAuth';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Report, User } from '../types';
+import { isLocalMobileUri } from '../utils';
 
 interface ComplianceDashboardScreenProps {
     onNavigate: (screen: string) => void;
@@ -30,6 +31,7 @@ interface ComplianceDashboardScreenProps {
 export default function ComplianceDashboardScreen({ onNavigate, onLogout }: ComplianceDashboardScreenProps) {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
     const [rsos, setRsos] = useState<User[]>([]);
     const [reports, setReports] = useState<Report[]>([]);
     const [selectedZone, setSelectedZone] = useState<string>('all');
@@ -402,7 +404,25 @@ export default function ComplianceDashboardScreen({ onNavigate, onLogout }: Comp
                                                     </View>
                                                 </View>
                                             ) : (
-                                                <Image source={{ uri: report.photoUri }} style={styles.proofImage} />
+                                                Platform.OS === 'web' && isLocalMobileUri(report.photoUri) ? (
+                                                    <View style={[styles.proofImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                                                        <Ionicons name="phone-portrait-outline" size={24} color={COLORS.gray} />
+                                                        <Text style={{ fontSize: 9, color: COLORS.gray, marginTop: 2, textAlign: 'center' }}>On Mobile</Text>
+                                                    </View>
+                                                ) : imageErrors[report.id] ? (
+                                                    <View style={[styles.proofImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                                                        <Ionicons name="image-outline" size={24} color={COLORS.gray} />
+                                                        <Text style={{ fontSize: 9, color: COLORS.gray, marginTop: 2, textAlign: 'center' }}>Unavailable</Text>
+                                                    </View>
+                                                ) : (
+                                                    <Image
+                                                        source={{ uri: report.photoUri }}
+                                                        style={styles.proofImage}
+                                                        onError={() => {
+                                                            setImageErrors(prev => ({ ...prev, [report.id]: true }));
+                                                        }}
+                                                    />
+                                                )
                                             )}
 
                                             <Text style={styles.timeText}>Reported: {new Date(report.createdAt).toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })}</Text>
@@ -411,7 +431,25 @@ export default function ComplianceDashboardScreen({ onNavigate, onLogout }: Comp
                                         {report.status === 'completed' && report.repairProofUri ? (
                                             <View style={styles.imageWrapper}>
                                                 <Text style={styles.imageLabel}>After</Text>
-                                                <Image source={{ uri: report.repairProofUri }} style={styles.proofImage} />
+                                                {Platform.OS === 'web' && isLocalMobileUri(report.repairProofUri) ? (
+                                                    <View style={[styles.proofImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: COLORS.success, borderStyle: 'dashed' }]}>
+                                                        <Ionicons name="phone-portrait-outline" size={24} color={COLORS.success} />
+                                                        <Text style={{ fontSize: 9, color: COLORS.success, marginTop: 2, textAlign: 'center' }}>On Mobile</Text>
+                                                    </View>
+                                                ) : imageErrors[report.id + '_proof'] ? (
+                                                    <View style={[styles.proofImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0', borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed' }]}>
+                                                        <Ionicons name="image-outline" size={24} color={COLORS.gray} />
+                                                        <Text style={{ fontSize: 9, color: COLORS.gray, marginTop: 2, textAlign: 'center' }}>Unavailable</Text>
+                                                    </View>
+                                                ) : (
+                                                    <Image
+                                                        source={{ uri: report.repairProofUri }}
+                                                        style={styles.proofImage}
+                                                        onError={() => {
+                                                            setImageErrors(prev => ({ ...prev, [report.id + '_proof']: true }));
+                                                        }}
+                                                    />
+                                                )}
                                                 <Text style={styles.timeText}>Fixed: {new Date(report.repairCompletedAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                                             </View>
                                         ) : (
