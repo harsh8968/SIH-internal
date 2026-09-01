@@ -66,7 +66,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     z-index: 9999 !important;
                 }
                 /* Wrapper carries Leaflet's positioning transform. Nothing here may
-                   set `transform` or `animation`, or the marker loses its position. */
+                   set a transform or an animation, or the marker loses its position. */
                 .custom-leaflet-marker-user-wrapper {
                     background: transparent;
                     border: 0;
