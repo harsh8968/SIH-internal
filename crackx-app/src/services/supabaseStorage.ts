@@ -70,6 +70,10 @@ class SupabaseStorageService {
                     is_approved: user.isApproved !== false,
                     points: user.points || 0,
                     admin_points_pool: user.adminPointsPool || 0,
+                    // getRegisteredUsers() reads contractor_id back, but this write
+                    // never sent it, so a contractor's link to their agency could
+                    // never be corrected once a stale value was in the row.
+                    contractor_id: user.contractorId ?? null,
                     created_at: new Date().toISOString(),
                 })
                 .select()

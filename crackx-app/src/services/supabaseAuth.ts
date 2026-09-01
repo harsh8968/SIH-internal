@@ -27,13 +27,30 @@ class SupabaseAuthService {
             if (persisted) {
                 console.log(`[Auth] Using Supabase data for demo user: ${normalizedUsername}`);
                 const { password: _, ...rest } = persisted;
-                // CRITICAL: Merge with hardcoded to get latest fields (like contractorId) 
-                // that were added to the code after the user first logged in.
-                user = { ...hardcoded, ...rest } as User;
-                delete (user as any).password;
-                
-                // Save the merged version back to Supabase/Cache so future loads are correct
-                await supabaseStorage.saveRegisteredUser({ ...hardcoded, ...rest });
+
+                // The persisted row wins for mutable state (points, approval).
+                // contractorId must NOT: it is the link an RSO assigns against.
+                // Supabase still holds UUIDs written when the `contractors` table
+                // was seeded, but that table is now empty, so the RSO can only pick
+                // DEMO_CONTRACTORS ids ('cont_anil'). Letting the stale UUID win is
+                // what left every contractor dashboard empty: the assignment saved
+                // 'cont_anil' while the logged-in contractor carried a UUID, and
+                // ContractorHomeScreen matches the two with ===.
+                //
+                // The comment this replaces said hardcoded fields should win. The
+                // spread order did the opposite.
+                const merged = {
+                    ...hardcoded,
+                    ...rest,
+                    ...(hardcoded.contractorId ? { contractorId: hardcoded.contractorId } : {}),
+                };
+
+                const { password: __, ...withoutPassword } = merged;
+                user = withoutPassword as User;
+
+                // Save the merged version back (password included) so Supabase is
+                // healed on next read too.
+                await supabaseStorage.saveRegisteredUser(merged);
             } else {
                 console.log(`[Auth] Hardcoded user found: ${normalizedUsername}`);
                 const { password: _, ...userData } = hardcoded;
