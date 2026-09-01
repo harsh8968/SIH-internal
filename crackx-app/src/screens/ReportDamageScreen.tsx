@@ -23,6 +23,7 @@ import authService from '../services/supabaseAuth';
 import { uploadImageToSupabase } from '../services/imageUpload';
 import { generateId, formatDate } from '../utils';
 import { findDuplicates, DuplicateMatch } from '../services/duplicates';
+import { classifyComplaint } from '../services/classify';
 import { MapComponent } from '../components/MapComponent';
 import DashboardLayout from '../components/DashboardLayout';
 import { checkConnectionWithMessage } from '../utils/networkCheck';
@@ -51,10 +52,15 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
     const [photoUri, setPhotoUri] = useState<string>(initialData?.photoUri || '');
     const [location, setLocation] = useState<LocationType | null>(null);
     const [manualAddress, setManualAddress] = useState('');
+    const [description, setDescription] = useState('');
     const [isEditingAddress, setIsEditingAddress] = useState(false);
     const [aiResult, setAiResult] = useState<any>(initialData?.detection || null);
     const [loading, setLoading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState('');
+
+    // Recomputed on every keystroke: routing is cheap, and showing the citizen
+    // where their complaint is heading is what makes the routing believable.
+    const classification = classifyComplaint(description, aiResult || undefined);
 
     // Camera is only offered on-site. Reporting from elsewhere means the user is
     // not at the damage, so the only honest photo source is their gallery.
@@ -356,6 +362,16 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
                 reportingMode,
                 location: finalLocation,
                 photoUri: cloudPhotoUrl, // Use Supabase URL instead of local URI
+                description: description.trim() || undefined,
+                classification: {
+                    department: classification.department,
+                    confidence: classification.confidence,
+                    matchedTerms: classification.matchedTerms,
+                    needsReview: classification.needsReview,
+                },
+                // Routed automatically. The RSO can still override it in the
+                // manage modal; this only decides where it lands first.
+                assignedDepartment: classification.department,
                 aiDetection: aiResult,
                 status: 'pending',
                 syncStatus: 'synced', // Already in cloud
@@ -764,6 +780,51 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
                             </View>
                         </View>
 
+                        {/* Describe the problem. This text is what the classifier
+                            reads to pick a department and score priority, so it is
+                            offered on every report, not just manual ones. */}
+                        <View style={styles.descriptionBlock}>
+                            <Text style={styles.descriptionLabel}>{t('describe_problem')}</Text>
+                            <Text style={styles.descriptionHint}>{t('describe_problem_hint')}</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder={t('describe_problem_placeholder')}
+                                placeholderTextColor={COLORS.gray}
+                                value={description}
+                                onChangeText={setDescription}
+                                multiline
+                                numberOfLines={4}
+                                maxLength={500}
+                            />
+                            <Text style={styles.descriptionCount}>
+                                {description.length}/500
+                            </Text>
+
+                            {/* Where this complaint is heading, updated live. A
+                                citizen who can see the routing trusts it; an
+                                evaluator can see it is not a hardcoded label. */}
+                            <View style={styles.routingCard}>
+                                <View style={styles.routingRow}>
+                                    <Text style={styles.routingLabel}>{t('routing_to')}</Text>
+                                    <Text style={styles.routingDept}>
+                                        {classification.needsReview
+                                            ? t('routing_pending')
+                                            : classification.department}
+                                    </Text>
+                                </View>
+                                {!classification.needsReview && (
+                                    <Text style={styles.routingWhy}>
+                                        {t('routing_because')}: {classification.matchedTerms.join(', ')}
+                                        {'  ·  '}
+                                        {Math.round(classification.confidence * 100)}%
+                                    </Text>
+                                )}
+                                {classification.needsReview && (
+                                    <Text style={styles.routingWhy}>{t('routing_hint')}</Text>
+                                )}
+                            </View>
+                        </View>
+
                         {/* Upload Progress Indicator */}
                         {uploadProgress && (
                             <View style={styles.progressContainer}>
@@ -895,6 +956,57 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: COLORS.border,
         color: COLORS.dark,
+    },
+    descriptionBlock: {
+        marginBottom: 8,
+    },
+    descriptionLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.dark,
+        marginBottom: 4,
+    },
+    descriptionHint: {
+        fontSize: 12,
+        color: COLORS.gray,
+        marginBottom: 10,
+    },
+    descriptionCount: {
+        fontSize: 11,
+        color: COLORS.gray,
+        textAlign: 'right',
+        marginTop: -14,
+        marginBottom: 16,
+    },
+    routingCard: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 20,
+        borderLeftWidth: 3,
+        borderLeftColor: COLORS.primary,
+    },
+    routingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    routingLabel: {
+        fontSize: 12,
+        color: COLORS.gray,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    routingDept: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: COLORS.primary,
+    },
+    routingWhy: {
+        fontSize: 11,
+        color: COLORS.gray,
+        marginTop: 6,
     },
     resultCard: {
         backgroundColor: COLORS.white,

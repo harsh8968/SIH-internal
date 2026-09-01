@@ -52,6 +52,17 @@ export default {
     retake_photo: 'Retake Photo',
     photo_required: 'Photo is required',
 
+    // Complaint description (read by the classifier)
+    describe_problem: 'Describe the problem',
+    describe_problem_hint: 'Write in any language. We use this to route your complaint to the right department.',
+    describe_problem_placeholder: 'e.g. Large pothole near the school gate, water collects here and two-wheelers keep skidding.',
+
+
+    // Automatic department routing
+    routing_to: 'Routing to',
+    routing_pending: 'Add detail to route',
+    routing_because: 'Matched',
+    routing_hint: 'Mention what is wrong (pothole, pipeline, garbage, signal) so we can route it automatically.',
     // Location
     current_location: 'Current Location',
     manual_location: 'Manual Location',
@@ -94,7 +105,7 @@ export default {
 
     // RSO
     assigned_complaints: 'Assigned Complaints',
-    sort_by_severity: 'Sort by Severity',
+    sort_by_priority: 'Sort by Priority',
     upload_repair_proof: 'Upload Repair Proof',
     mark_as_completed: 'Mark as Completed',
     repair_in_progress: 'Repair In Progress',

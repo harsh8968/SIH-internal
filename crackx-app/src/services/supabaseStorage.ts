@@ -278,6 +278,8 @@ class SupabaseStorageService {
                     ai_detection: {
                         ...report.aiDetection,
                         management: {
+                            description: report.description,
+                            classification: report.classification,
                             contractorId: report.contractorId,
                             assignedDepartment: report.assignedDepartment,
                             rootCause: report.rootCause,
@@ -405,6 +407,8 @@ class SupabaseStorageService {
                 reportingMode: report.reporting_mode,
                 location: report.location,
                 photoUri: report.photo_uri,
+                description: report.description || report.ai_detection?.management?.description,
+                classification: report.ai_detection?.management?.classification,
                 videoUri: report.video_uri,
                 aiDetection: report.ai_detection,
                 status: report.status,
@@ -480,6 +484,8 @@ class SupabaseStorageService {
                 reportingMode: report.reporting_mode,
                 location: report.location,
                 photoUri: report.photo_uri,
+                description: report.description || report.ai_detection?.management?.description,
+                classification: report.ai_detection?.management?.classification,
                 videoUri: report.video_uri,
                 aiDetection: report.ai_detection,
                 status: report.status,

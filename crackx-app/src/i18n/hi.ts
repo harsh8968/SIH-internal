@@ -52,6 +52,17 @@ export default {
     retake_photo: 'दोबारा फोटो लें',
     photo_required: 'फोटो आवश्यक है',
 
+    // Complaint description (read by the classifier)
+    describe_problem: 'समस्या का विवरण दें',
+    describe_problem_hint: 'किसी भी भाषा में लिखें। हम इसका उपयोग आपकी शिकायत को सही विभाग तक पहुंचाने के लिए करते हैं।',
+    describe_problem_placeholder: 'उदा. स्कूल गेट के पास बड़ा गड्ढा, यहाँ पानी जमा होता है और दोपहिया वाहन फिसलते हैं।',
+
+
+    // Automatic department routing
+    routing_to: 'भेजा जा रहा है',
+    routing_pending: 'विवरण जोड़ें',
+    routing_because: 'मिलान',
+    routing_hint: 'बताएं क्या समस्या है (गड्ढा, पाइपलाइन, कचरा, सिग्नल) ताकि हम इसे स्वतः भेज सकें।',
     // Location
     current_location: 'वर्तमान स्थान',
     manual_location: 'मैनुअल स्थान',
@@ -94,7 +105,7 @@ export default {
 
     // RSO
     assigned_complaints: 'नियुक्त शिकायतें',
-    sort_by_severity: 'गंभीरता के अनुसार क्रमबद्ध करें',
+    sort_by_priority: 'प्राथमिकता अनुसार',
     upload_repair_proof: 'मरम्मत का प्रमाण अपलोड करें',
     mark_as_completed: 'पूर्ण के रूप में चिह्नित करें',
     repair_in_progress: 'मरम्मत जारी है',

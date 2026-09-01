@@ -40,6 +40,17 @@ export interface Location {
   zone?: string;
 }
 
+/** The routing decision recorded on a report at submission time. */
+export interface ComplaintClassification {
+  department: Department;
+  /** 0-1 share of the evidence that pointed at this department. */
+  confidence: number;
+  /** The terms that decided it, so an officer can see the reasoning. */
+  matchedTerms: string[];
+  /** Too weakly evidenced to act on without a human glance. */
+  needsReview: boolean;
+}
+
 export interface AIDetectionResult {
   damageType: DamageType;
   confidence: number;
@@ -73,6 +84,18 @@ export interface Report {
   reportingMode: ReportingMode;
   location: Location;
   photoUri: string;
+  /**
+   * What the citizen wrote about the defect, in whatever language they chose.
+   * Optional because a photo alone is still a valid report, and because every
+   * report filed before this field existed has none.
+   */
+  description?: string;
+  /**
+   * How the complaint was routed, and on what evidence. Stored rather than
+   * recomputed so the dashboard shows the decision that was actually acted on,
+   * even after the lexicon is later tuned.
+   */
+  classification?: ComplaintClassification;
   aiDetection?: AIDetectionResult;
   status: ReportStatus;
   syncStatus: SyncStatus;

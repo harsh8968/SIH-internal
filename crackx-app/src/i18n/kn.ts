@@ -52,6 +52,17 @@ export default {
     retake_photo: 'ಮತ್ತೆ ಫೋಟೋ ತೆಗೆದುಕೊಳ್ಳಿ',
     photo_required: 'ಫೋಟೋ ಅಗತ್ಯವಿದೆ',
 
+    // Complaint description (read by the classifier)
+    describe_problem: 'ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ',
+    describe_problem_hint: 'ಯಾವುದೇ ಭಾಷೆಯಲ್ಲಿ ಬರೆಯಿರಿ. ನಿಮ್ಮ ದೂರನ್ನು ಸರಿಯಾದ ಇಲಾಖೆಗೆ ಕಳುಹಿಸಲು ನಾವು ಇದನ್ನು ಬಳಸುತ್ತೇವೆ.',
+    describe_problem_placeholder: 'ಉದಾ. ಶಾಲೆಯ ಗೇಟ್ ಬಳಿ ದೊಡ್ಡ ಗುಂಡಿ, ಇಲ್ಲಿ ನೀರು ನಿಲ್ಲುತ್ತದೆ ಮತ್ತು ದ್ವಿಚಕ್ರ ವಾಹನಗಳು ಜಾರುತ್ತವೆ.',
+
+
+    // Automatic department routing
+    routing_to: 'ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ',
+    routing_pending: 'ವಿವರ ಸೇರಿಸಿ',
+    routing_because: 'ಹೊಂದಿಕೆ',
+    routing_hint: 'ಏನು ಸಮಸ್ಯೆ ಎಂದು ತಿಳಿಸಿ (ಗುಂಡಿ, ಪೈಪ್, ಕಸ, ಸಿಗ್ನಲ್) ಇದರಿಂದ ನಾವು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕಳುಹಿಸಬಹುದು.',
     // Location
     current_location: 'ಪ್ರಸ್ತುತ ಸ್ಥಳ',
     manual_location: 'ಹಸ್ತಚಾಲಿತ ಸ್ಥಳ',
@@ -94,7 +105,7 @@ export default {
 
     // RSO
     assigned_complaints: 'ನಿಯೋಜಿತ ದೂರುಗಳು',
-    sort_by_severity: 'ಗಂಭೀರತೆಯ ಆಧಾರದ ಮೇಲೆ',
+    sort_by_priority: 'ಆದ್ಯತೆಯ ಪ್ರಕಾರ',
     upload_repair_proof: 'ದುರಸ್ತಿ ಪುರಾವೆ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ',
     mark_as_completed: 'ಪೂರ್ಣಗೊಂಡಿದೆ ಎಂದು ಗುರುತಿಸಿ',
     repair_in_progress: 'ದುರಸ್ತಿ ಪ್ರಗತಿಯಲ್ಲಿದೆ',

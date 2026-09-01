@@ -52,6 +52,17 @@ export default {
     retake_photo: 'पुन्हा फोटो घ्या',
     photo_required: 'फोटो आवश्यक आहे',
 
+    // Complaint description (read by the classifier)
+    describe_problem: 'समस्येचे वर्णन करा',
+    describe_problem_hint: 'कोणत्याही भाषेत लिहा. तुमची तक्रार योग्य विभागाकडे पाठवण्यासाठी आम्ही याचा वापर करतो.',
+    describe_problem_placeholder: 'उदा. शाळेच्या गेटजवळ मोठा खड्डा, इथे पाणी साचते आणि दुचाकी घसरतात.',
+
+
+    // Automatic department routing
+    routing_to: 'पाठवले जात आहे',
+    routing_pending: 'तपशील जोडा',
+    routing_because: 'जुळले',
+    routing_hint: 'काय समस्या आहे ते सांगा (खड्डा, पाईपलाईन, कचरा, सिग्नल) जेणेकरून आम्ही आपोआप पाठवू शकू.',
     // Location
     current_location: 'सध्याचे स्थान',
     manual_location: 'मॅन्युअल स्थान',
@@ -94,7 +105,7 @@ export default {
 
     // RSO
     assigned_complaints: 'नियुक्त तक्रारी',
-    sort_by_severity: 'तीव्रतेनुसार क्रमवारी लावा',
+    sort_by_priority: 'प्राधान्यानुसार',
     upload_repair_proof: 'दुरुस्ती पुरावा अपलोड करा',
     mark_as_completed: 'पूर्ण म्हणून चिन्हांकित करा',
     repair_in_progress: 'दुरुस्ती सुरू आहे',

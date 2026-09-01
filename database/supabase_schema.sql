@@ -3,6 +3,11 @@
 -- =====================================================
 -- Run this SQL in your Supabase SQL Editor
 -- Dashboard -> SQL Editor -> New Query -> Paste and Run
+--
+-- This file describes a FRESH database. For a database that already exists,
+-- run the migrations instead -- they are additive and safe to re-run:
+--   migration_001_complaint_text.sql
+--   migration_002_schema_alignment.sql
 -- =====================================================
 
 -- Enable UUID extension
@@ -15,11 +20,13 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL, -- In production, use proper password hashing
-  role TEXT NOT NULL CHECK (role IN ('citizen', 'rso', 'admin')),
+  role TEXT NOT NULL CHECK (role IN ('citizen', 'rso', 'admin', 'contractor', 'compliance_officer')),
   zone TEXT,
   is_approved BOOLEAN DEFAULT true,
   points INTEGER DEFAULT 0,
   admin_points_pool INTEGER DEFAULT 0,
+  -- Links a contractor login to the agency record it acts for.
+  contractor_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -38,8 +45,14 @@ CREATE TABLE IF NOT EXISTS reports (
   reporting_mode TEXT NOT NULL CHECK (reporting_mode IN ('on-site', 'from-elsewhere')),
   location JSONB NOT NULL,
   photo_uri TEXT NOT NULL,
+  video_uri TEXT,
+  -- The citizen's own words. Read by classification, priority scoring and
+  -- duplicate detection, so it is the input the AI features depend on.
+  description TEXT,
   ai_detection JSONB,
-  status TEXT NOT NULL CHECK (status IN ('pending', 'in-progress', 'completed')),
+  -- 'verification-pending' is set when a contractor has submitted repair proof
+  -- and the RSO has not yet approved it.
+  status TEXT NOT NULL CHECK (status IN ('pending', 'in-progress', 'verification-pending', 'completed')),
   sync_status TEXT DEFAULT 'synced' CHECK (sync_status IN ('pending', 'synced', 'failed')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -51,6 +64,19 @@ CREATE TABLE IF NOT EXISTS reports (
   rso_id TEXT,
   citizen_rating INTEGER CHECK (citizen_rating >= 1 AND citizen_rating <= 5),
   citizen_feedback TEXT,
+
+  -- Department routing: assigned automatically at submission from the
+  -- complaint text, and overridable by an RSO during verification.
+  assigned_department TEXT,
+  origin_department TEXT,
+
+  -- Verification metadata captured by the RSO.
+  root_cause TEXT,
+  utility_type TEXT,
+
+  -- Work-order assignment.
+  contractor_id TEXT,
+  work_order_generated_at TIMESTAMP WITH TIME ZONE,
   FOREIGN KEY (citizen_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (rso_id) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -61,6 +87,43 @@ CREATE INDEX IF NOT EXISTS idx_reports_rso_id ON reports(rso_id);
 CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
 CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reports_location_zone ON reports((location->>'zone'));
+CREATE INDEX IF NOT EXISTS idx_reports_assigned_department ON reports(assigned_department);
+CREATE INDEX IF NOT EXISTS idx_reports_contractor_id ON reports(contractor_id);
+
+-- =====================================================
+-- CONTRACTORS TABLE
+-- =====================================================
+-- Repair agencies an RSO can assign a verified complaint to.
+CREATE TABLE IF NOT EXISTS contractors (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  agency_name TEXT NOT NULL,
+  license_number TEXT,
+  -- Contractors are offered to the RSO best-rated first.
+  rating NUMERIC(3, 2) DEFAULT 0,
+  zone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_contractors_zone ON contractors(zone);
+
+-- =====================================================
+-- NOTIFICATIONS TABLE
+-- =====================================================
+-- In-app notifications, also streamed to clients over Supabase Realtime.
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  -- Free-form payload, e.g. the report id the notification refers to.
+  data JSONB,
+  read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
 -- =====================================================
 -- SYNC QUEUE TABLE (for offline sync tracking)
@@ -128,6 +191,8 @@ CREATE TRIGGER update_reports_updated_at
 -- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contractors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE points_transactions ENABLE ROW LEVEL SECURITY;
 
@@ -137,6 +202,14 @@ CREATE POLICY "Allow all operations on users" ON users
 
 -- Reports: Allow all operations for now
 CREATE POLICY "Allow all operations on reports" ON reports
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- Contractors: Allow all operations
+CREATE POLICY "Allow all operations on contractors" ON contractors
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- Notifications: Allow all operations
+CREATE POLICY "Allow all operations on notifications" ON notifications
   FOR ALL USING (true) WITH CHECK (true);
 
 -- Sync Queue: Allow all operations

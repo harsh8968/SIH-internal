@@ -22,7 +22,8 @@ import * as ImagePicker from 'expo-image-picker';
 import notificationService from '../services/notifications';
 import { uploadImageToSupabase } from '../services/imageUpload';
 import DashboardLayout from '../components/DashboardLayout';
-import { groupDuplicates } from '../services/duplicates';
+import { groupDuplicates, findDuplicates, SEMANTIC_THRESHOLD } from '../services/duplicates';
+import { computePriority, PriorityResult } from '../services/priority';
 
 interface RSOHomeScreenProps {
     onNavigate: (screen: string) => void;
@@ -30,11 +31,58 @@ interface RSOHomeScreenProps {
     onReviewReport: (report: Report) => void;
 }
 
+/** What the RSO is shown about a cluster of complaints about one defect. */
+interface DuplicateInfo {
+    /** How many OTHER complaints describe the same defect. */
+    count: number;
+    /** Distance to the nearest of them, metres. */
+    nearestMeters: number | null;
+    /** Strongest wording agreement across the cluster, 0-1. */
+    bestSimilarity: number | null;
+    /** True when wording, not just proximity, carried at least one match. */
+    hasSemanticMatch: boolean;
+}
+
+/** Red reads as "act now" at a glance; grey as "it can wait". */
+const PRIORITY_COLORS: Record<string, string> = {
+    critical: '#dc2626',
+    high: '#ea580c',
+    medium: '#ca8a04',
+    low: '#6b7280',
+};
+
+/**
+ * One line explaining how a complaint came to sit in this department.
+ *
+ * The routing shown must be the department the work order will actually go to,
+ * but the classifier's reasoning only justifies the classifier's own answer. If
+ * an officer has overridden it, say so rather than quoting matched terms as
+ * though they argued for the override.
+ */
+function routingSummary(report: Report): { department: string; why: string; isReview: boolean } {
+    const cls = report.classification!;
+    const assigned = report.assignedDepartment || cls.department;
+    const isOverridden = assigned !== cls.department;
+
+    if (isOverridden) {
+        return { department: assigned, why: `set by RSO · auto-routed to ${cls.department}`, isReview: false };
+    }
+    if (cls.needsReview) {
+        return { department: assigned, why: 'weak signal · needs review', isReview: true };
+    }
+    return {
+        department: assigned,
+        why: `${Math.round(cls.confidence * 100)}% · ${cls.matchedTerms.slice(0, 3).join(', ')}`,
+        isReview: false,
+    };
+}
+
 export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: RSOHomeScreenProps) {
     const { t } = useTranslation();
     const [reports, setReports] = useState<Report[]>([]);
     const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
-    const [sortBySeverity, setSortBySeverity] = useState(false);
+    const [sortByPriority, setSortByPriority] = useState(true);
+    const [priorities, setPriorities] = useState<Record<string, PriorityResult>>({});
     const [userZone, setUserZone] = useState<string>('');
     const [user, setUser] = useState<User | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -53,7 +101,7 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
     // reportId -> how many OTHER open complaints describe the same defect.
     // Only the oldest report in a cluster gets an entry: that is the one the RSO
     // should action, and closing it should close the rest.
-    const [duplicateCounts, setDuplicateCounts] = useState<Record<string, number>>({});
+    const [duplicateInfo, setDuplicateInfo] = useState<Record<string, DuplicateInfo>>({});
 
     // Proof View Modal State
     const [proofModalVisible, setProofModalVisible] = useState(false);
@@ -78,7 +126,7 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [sortBySeverity]);
+    }, [sortByPriority]);
 
     const loadReports = async () => {
         try {
@@ -116,24 +164,55 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                     // For now, the UI will just show clean data.
                 }
 
-                if (sortBySeverity) {
-                    zoneReports = zoneReports.sort((a, b) => {
-                        const severityOrder = { high: 3, medium: 2, low: 1 };
-                        const aSeverity = a.aiDetection?.severity || 'low';
-                        const bSeverity = b.aiDetection?.severity || 'low';
-                        return severityOrder[bSeverity] - severityOrder[aSeverity];
-                    });
-                }
-
                 // Cluster complaints that describe the same defect so the RSO sees
                 // "one pothole, 4 complaints" instead of 4 unrelated work items.
+                // Must run before scoring: corroboration raises priority.
                 const counts: Record<string, number> = {};
+                const info: Record<string, DuplicateInfo> = {};
                 groupDuplicates(zoneReports).forEach(cluster => {
-                    if (cluster.length > 1) {
-                        counts[cluster[0].id] = cluster.length - 1;
-                    }
+                    if (cluster.length <= 1) return;
+
+                    const head = cluster[0];
+                    counts[head.id] = cluster.length - 1;
+
+                    // Re-run the match against the head to recover the evidence
+                    // that grouped them, so the card can show why.
+                    const matches = findDuplicates(head, zoneReports);
+                    const distances = matches
+                        .map(m => m.distanceMeters)
+                        .filter((d): d is number => d !== null);
+                    const similarities = matches
+                        .map(m => m.similarity)
+                        .filter((v): v is number => v !== null);
+
+                    info[head.id] = {
+                        count: cluster.length - 1,
+                        nearestMeters: distances.length ? Math.min(...distances) : null,
+                        bestSimilarity: similarities.length ? Math.max(...similarities) : null,
+                        hasSemanticMatch: matches.some(m => m.matchedBy === 'semantic'),
+                    };
                 });
-                setDuplicateCounts(counts);
+                setDuplicateInfo(info);
+
+                // Priority depends on age and duplicate count, both of which move
+                // over time, so it is recomputed on load rather than stored.
+                const now = Date.now();
+                const scored: Record<string, PriorityResult> = {};
+                zoneReports.forEach(r => {
+                    scored[r.id] = computePriority({
+                        severity: r.aiDetection?.severity,
+                        text: r.description,
+                        duplicateCount: counts[r.id] || 0,
+                        ageDays: (now - new Date(r.createdAt).getTime()) / 86400000,
+                    });
+                });
+                setPriorities(scored);
+
+                if (sortByPriority) {
+                    zoneReports = [...zoneReports].sort(
+                        (a, b) => (scored[b.id]?.score || 0) - (scored[a.id]?.score || 0)
+                    );
+                }
 
                 setReports(zoneReports);
                 // ... rest of the function
@@ -399,11 +478,11 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                 {/* Controls */}
                 <View style={styles.controls}>
                     <TouchableOpacity
-                        style={[styles.sortButton, sortBySeverity && styles.sortButtonActive]}
-                        onPress={() => setSortBySeverity(!sortBySeverity)}
+                        style={[styles.sortButton, sortByPriority && styles.sortButtonActive]}
+                        onPress={() => setSortByPriority(!sortByPriority)}
                     >
                         <Text style={styles.sortButtonText}>
-                            {t('sort_by_severity')}
+                            {t('sort_by_priority')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -490,7 +569,61 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                                                 {report.aiDetection?.severity || 'N/A'}
                                             </Text>
                                         </View>
+                                        {priorities[report.id] && (
+                                            <View style={[
+                                                styles.priorityPill,
+                                                { backgroundColor: PRIORITY_COLORS[priorities[report.id].band] },
+                                            ]}>
+                                                <Text style={styles.priorityScore}>
+                                                    {priorities[report.id].score}
+                                                </Text>
+                                                <Text style={styles.priorityCaption}>priority</Text>
+                                            </View>
+                                        )}
                                     </View>
+
+                                    {/* The citizen's own words. Shown before the
+                                        metadata because it is what an officer
+                                        actually needs to judge the complaint. */}
+                                    {report.description ? (
+                                        <Text style={styles.reportDescription} numberOfLines={3}>
+                                            "{report.description}"
+                                        </Text>
+                                    ) : null}
+
+                                    {/* Auto-routing, with the terms that decided
+                                        it. An officer who disagrees overrides it
+                                        in Verify & Assign. */}
+                                    {report.classification && (() => {
+                                        const routing = routingSummary(report);
+                                        return (
+                                            <View style={styles.routingChipRow}>
+                                                <View style={[
+                                                    styles.routingChip,
+                                                    routing.isReview && styles.routingChipReview,
+                                                ]}>
+                                                    <Text style={[
+                                                        styles.routingChipText,
+                                                        routing.isReview && styles.routingChipTextReview,
+                                                    ]}>
+                                                        {routing.isReview ? '⚠ ' : '✓ '}
+                                                        {routing.department}
+                                                    </Text>
+                                                </View>
+                                                <Text style={styles.routingChipWhy} numberOfLines={1}>
+                                                    {routing.why}
+                                                </Text>
+                                            </View>
+                                        );
+                                    })()}
+
+                                    {priorities[report.id] && priorities[report.id].factors.length > 0 && (
+                                        <Text style={styles.priorityWhy} numberOfLines={2}>
+                                            {priorities[report.id].factors
+                                                .map(f => `${f.label} +${Math.round(f.points)}`)
+                                                .join('  ·  ')}
+                                        </Text>
+                                    )}
 
                                     <View style={styles.reportMeta}>
                                         <View>
@@ -502,10 +635,32 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                                                     Contractor: {contractors.find(c => c.id === report.contractorId)?.agencyName || 'Unknown'}
                                                 </Text>
                                             )}
-                                            {duplicateCounts[report.id] > 0 && (
-                                                <Text style={styles.duplicateBadge}>
-                                                    +{duplicateCounts[report.id]} duplicate{duplicateCounts[report.id] > 1 ? 's' : ''} · one repair closes {duplicateCounts[report.id] + 1}
-                                                </Text>
+                                            {duplicateInfo[report.id] && (
+                                                <>
+                                                    <Text style={styles.duplicateBadge}>
+                                                        +{duplicateInfo[report.id].count} duplicate{duplicateInfo[report.id].count > 1 ? 's' : ''} · one repair closes {duplicateInfo[report.id].count + 1}
+                                                    </Text>
+                                                    {/* The evidence behind the merge, so the officer
+                                                        can judge it rather than trust it. */}
+                                                    <Text style={styles.duplicateEvidence}>
+                                                        {[
+                                                            duplicateInfo[report.id].nearestMeters !== null
+                                                                ? `nearest ${duplicateInfo[report.id].nearestMeters} m away`
+                                                                : 'same road',
+                                                            // Only quote the wording score when it is
+                                                            // actually carrying weight. On a match decided
+                                                            // by GPS, a low percentage reads as weak
+                                                            // confidence in the merge, which it is not.
+                                                            duplicateInfo[report.id].hasSemanticMatch
+                                                                ? 'matched on description'
+                                                                : null,
+                                                            duplicateInfo[report.id].bestSimilarity !== null
+                                                                && duplicateInfo[report.id].bestSimilarity! >= SEMANTIC_THRESHOLD
+                                                                ? `${Math.round(duplicateInfo[report.id].bestSimilarity! * 100)}% matching wording`
+                                                                : null,
+                                                        ].filter(Boolean).join('  ·  ')}
+                                                    </Text>
+                                                </>
                                             )}
                                         </View>
                                         <Text
@@ -903,6 +1058,80 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 16,
+        color: COLORS.gray,
+    },
+    reportDescription: {
+        fontSize: 13,
+        lineHeight: 19,
+        color: COLORS.dark,
+        fontStyle: 'italic',
+        marginTop: 10,
+        paddingLeft: 10,
+        borderLeftWidth: 3,
+        borderLeftColor: COLORS.border,
+    },
+    priorityPill: {
+        marginLeft: 8,
+        minWidth: 46,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    priorityScore: {
+        color: COLORS.white,
+        fontSize: 15,
+        fontWeight: '800',
+        lineHeight: 17,
+    },
+    priorityCaption: {
+        color: COLORS.white,
+        fontSize: 8,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.4,
+    },
+    duplicateEvidence: {
+        fontSize: 10,
+        color: COLORS.gray,
+        marginTop: 2,
+    },
+    priorityWhy: {
+        fontSize: 11,
+        color: COLORS.gray,
+        marginTop: 8,
+    },
+    routingChipRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    routingChip: {
+        // Cream fill with a coloured rule and matching text, the same treatment
+        // as the role badge in the sidebar. COLORS.secondary is a near-white
+        // background tone, so it can never carry white text.
+        backgroundColor: COLORS.secondary,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    routingChipReview: {
+        borderColor: COLORS.warning,
+    },
+    routingChipText: {
+        color: COLORS.primary,
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    routingChipTextReview: {
+        color: COLORS.warning,
+    },
+    routingChipWhy: {
+        flex: 1,
+        marginLeft: 8,
+        fontSize: 11,
         color: COLORS.gray,
     },
     reportCard: {
