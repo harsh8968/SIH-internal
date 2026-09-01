@@ -21,7 +21,8 @@ import aiService from '../services/ai';
 import storageService from '../services/supabaseStorage';
 import authService from '../services/supabaseAuth';
 import { uploadImageToSupabase } from '../services/imageUpload';
-import { generateId } from '../utils';
+import { generateId, formatDate } from '../utils';
+import { findDuplicates, DuplicateMatch } from '../services/duplicates';
 import { MapComponent } from '../components/MapComponent';
 import DashboardLayout from '../components/DashboardLayout';
 import { checkConnectionWithMessage } from '../utils/networkCheck';
@@ -218,6 +219,53 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
         }
     };
 
+    /**
+     * Explain the match in the citizen's terms: who reported it, how close, when,
+     * and where it currently stands. "A duplicate exists" on its own gives them
+     * nothing to judge against.
+     */
+    const buildDuplicateMessage = (matches: DuplicateMatch[]): string => {
+        const closest = matches[0];
+        const where = closest.distanceMeters !== null
+            ? `${closest.distanceMeters}m away`
+            : 'on the same road';
+        const who = closest.isSameReporter ? 'You already reported this' : 'This was already reported';
+
+        const lines = [
+            `${who} ${where} on ${formatDate(closest.report.createdAt)}.`,
+            `Current status: ${closest.report.status}.`,
+        ];
+
+        const others = matches.length - 1;
+        if (others > 0) {
+            lines.push(`${others} other open report${others > 1 ? 's' : ''} also match this spot.`);
+        }
+
+        lines.push('', 'Reporting it again will not speed up the repair. Submit anyway?');
+        return lines.join('\n');
+    };
+
+    const confirmDuplicateSubmit = (matches: DuplicateMatch[]): Promise<boolean> => {
+        const title = t('duplicate_found', 'Possible Duplicate Complaint');
+        const message = buildDuplicateMessage(matches);
+
+        if (Platform.OS === 'web') {
+            return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+        }
+
+        return new Promise<boolean>((resolve) => {
+            Alert.alert(
+                title,
+                message,
+                [
+                    { text: t('cancel'), style: 'cancel', onPress: () => resolve(false) },
+                    { text: t('submit_anyway', 'Submit Anyway'), onPress: () => resolve(true) },
+                ],
+                { cancelable: false }
+            );
+        });
+    };
+
     const handleSubmit = async () => {
         setLoading(true);
         try {
@@ -247,12 +295,6 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
             // Generate report ID first
             const reportId = generateId();
 
-            // Upload image to Supabase Storage
-            setUploadProgress('Uploading image to cloud...');
-            console.log('📤 Starting image upload...');
-            const cloudPhotoUrl = await uploadImageToSupabase(photoUri, 'damage-photos', reportId);
-            console.log('✅ Image uploaded:', cloudPhotoUrl);
-
             // Ensure we have a valid zone. If missing, try auto-detect.
             let finalZone = location?.zone;
             if (!finalZone && (location?.latitude || manualAddress)) {
@@ -275,6 +317,36 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
                 address: manualAddress,
                 zone: finalZone || 'zone1',
             };
+
+            // Duplicate check runs BEFORE the upload. If the citizen backs out
+            // because someone already reported this pothole, we should not have
+            // spent their data on a photo we are about to throw away.
+            setUploadProgress(t('checking_duplicates', 'Checking for existing reports...'));
+            const zoneReports = await storageService.getReportsByZone(finalLocation.zone || 'zone1');
+            const matches = findDuplicates(
+                { id: reportId, citizenId: user.id, location: finalLocation, aiDetection: aiResult },
+                zoneReports
+            );
+
+            if (matches.length > 0) {
+                setUploadProgress('');
+                const proceed = await confirmDuplicateSubmit(matches);
+                if (!proceed) {
+                    setLoading(false);
+                    Alert.alert(
+                        t('duplicate_not_filed', 'Not Filed'),
+                        t('duplicate_not_filed_msg', 'Nothing was submitted. The existing complaint is already being tracked.')
+                    );
+                    onBack();
+                    return;
+                }
+            }
+
+            // Upload image to Supabase Storage
+            setUploadProgress('Uploading image to cloud...');
+            console.log('📤 Starting image upload...');
+            const cloudPhotoUrl = await uploadImageToSupabase(photoUri, 'damage-photos', reportId);
+            console.log('✅ Image uploaded:', cloudPhotoUrl);
 
             setUploadProgress('Saving report to database...');
             console.log('💾 Saving report to database...');

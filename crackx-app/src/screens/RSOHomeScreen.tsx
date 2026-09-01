@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import notificationService from '../services/notifications';
 import { uploadImageToSupabase } from '../services/imageUpload';
 import DashboardLayout from '../components/DashboardLayout';
+import { groupDuplicates } from '../services/duplicates';
 
 interface RSOHomeScreenProps {
     onNavigate: (screen: string) => void;
@@ -48,6 +49,11 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
     const [manageModalVisible, setManageModalVisible] = useState(false);
     const [activeReport, setActiveReport] = useState<Report | null>(null);
     const [contractors, setContractors] = useState<Contractor[]>([]);
+
+    // reportId -> how many OTHER open complaints describe the same defect.
+    // Only the oldest report in a cluster gets an entry: that is the one the RSO
+    // should action, and closing it should close the rest.
+    const [duplicateCounts, setDuplicateCounts] = useState<Record<string, number>>({});
 
     // Proof View Modal State
     const [proofModalVisible, setProofModalVisible] = useState(false);
@@ -118,6 +124,16 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                         return severityOrder[bSeverity] - severityOrder[aSeverity];
                     });
                 }
+
+                // Cluster complaints that describe the same defect so the RSO sees
+                // "one pothole, 4 complaints" instead of 4 unrelated work items.
+                const counts: Record<string, number> = {};
+                groupDuplicates(zoneReports).forEach(cluster => {
+                    if (cluster.length > 1) {
+                        counts[cluster[0].id] = cluster.length - 1;
+                    }
+                });
+                setDuplicateCounts(counts);
 
                 setReports(zoneReports);
                 // ... rest of the function
@@ -484,6 +500,11 @@ export default function RSOHomeScreen({ onNavigate, onLogout, onReviewReport }: 
                                             {report.contractorId && (
                                                 <Text style={{ fontSize: 11, color: COLORS.secondary, marginTop: 4, fontWeight: '600' }}>
                                                     Contractor: {contractors.find(c => c.id === report.contractorId)?.agencyName || 'Unknown'}
+                                                </Text>
+                                            )}
+                                            {duplicateCounts[report.id] > 0 && (
+                                                <Text style={styles.duplicateBadge}>
+                                                    +{duplicateCounts[report.id]} duplicate{duplicateCounts[report.id] > 1 ? 's' : ''} · one repair closes {duplicateCounts[report.id] + 1}
                                                 </Text>
                                             )}
                                         </View>
@@ -942,6 +963,18 @@ const styles = StyleSheet.create({
     reportDate: {
         fontSize: 12,
         color: COLORS.gray,
+    },
+    duplicateBadge: {
+        fontSize: 11,
+        color: COLORS.accent,
+        backgroundColor: COLORS.secondary,
+        marginTop: 6,
+        paddingVertical: 3,
+        paddingHorizontal: 8,
+        borderRadius: 10,
+        fontWeight: '700',
+        alignSelf: 'flex-start',
+        overflow: 'hidden',
     },
     statusBadge: {
         fontSize: 12,

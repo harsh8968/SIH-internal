@@ -142,8 +142,9 @@ class LocationService {
         };
     }
 
-    // Calculate distance between two points (Haversine formula)
-    private calculateDistance(
+    // Calculate distance between two points (Haversine formula). Returns km.
+    // Public: duplicates.ts reuses this rather than carrying a second copy.
+    calculateDistance(
         lat1: number,
         lon1: number,
         lat2: number,
