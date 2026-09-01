@@ -65,10 +65,17 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     box-shadow: 0 4px 10px rgba(0,0,0,0.4);
                     z-index: 9999 !important;
                 }
+                /* Wrapper carries Leaflet's positioning transform. Nothing here may
+                   set `transform` or `animation`, or the marker loses its position. */
+                .custom-leaflet-marker-user-wrapper {
+                    background: transparent;
+                    border: 0;
+                }
                 .custom-leaflet-marker-user {
                     background-color: #f97316;
                     width: 20px;
                     height: 20px;
+                    box-sizing: border-box;
                     border-radius: 50%;
                     border: 3px solid white;
                     box-shadow: 0 3px 8px rgba(0,0,0,0.4);
@@ -219,8 +226,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             if (userMarker.current) {
                 userMarker.current.setLatLng([latitude, longitude]);
             } else {
+                // The pulse animation MUST live on an inner div. Leaflet positions
+                // the icon root with an inline transform: translate3d(x,y,0), and a
+                // CSS animation on that same element outranks inline styles, so
+                // `transform: scale()` in the keyframes wipes out the translation
+                // and pins the marker to the map pane origin instead of the user.
                 const userIcon = L.divIcon({
-                    className: 'custom-leaflet-marker-user',
+                    className: 'custom-leaflet-marker-user-wrapper',
+                    html: '<div class="custom-leaflet-marker-user"></div>',
                     iconSize: [20, 20],
                     iconAnchor: [10, 10]
                 });
