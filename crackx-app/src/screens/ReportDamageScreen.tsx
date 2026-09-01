@@ -55,6 +55,10 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
     const [loading, setLoading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState('');
 
+    // Camera is only offered on-site. Reporting from elsewhere means the user is
+    // not at the damage, so the only honest photo source is their gallery.
+    const isOnSite = reportingMode === 'on-site';
+
     // If initialData is provided, we need to ensure location is captured too
     useEffect(() => {
         if (initialData) {
@@ -351,29 +355,48 @@ export default function ReportDamageScreen({ onNavigate, onBack, onSuccess, onLo
                     </View>
                 )}
 
-                {/* Step: Photo */}
+                {/* Step: Photo
+                    on-site      -> camera + gallery (user is standing at the damage)
+                    from-elsewhere -> gallery only (user cannot photograph a road
+                                      they are not at; the photo was taken earlier) */}
                 {step === 'photo' && (
                     <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>{t('take_photo')}</Text>
+                        <Text style={styles.stepTitle}>
+                            {isOnSite ? t('take_photo') : t('choose_from_gallery')}
+                        </Text>
                         {photoUri ? (
                             <View>
                                 <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-                                <TouchableOpacity style={styles.button} onPress={handleTakePhoto}>
-                                    <Text style={styles.buttonText}>{t('retake_photo')}</Text>
+                                <TouchableOpacity
+                                    style={styles.button}
+                                    onPress={isOnSite ? handleTakePhoto : handleChooseFromGallery}
+                                >
+                                    <Text style={styles.buttonText}>
+                                        {isOnSite ? t('retake_photo') : t('choose_from_gallery')}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
                             <View>
-                                <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
-                                    <Ionicons name="camera" size={48} color={COLORS.white} style={{ marginBottom: 8 }} />
-                                    <Text style={styles.photoButtonText}>{t('take_photo')}</Text>
-                                </TouchableOpacity>
+                                {isOnSite && (
+                                    <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
+                                        <Ionicons name="camera" size={48} color={COLORS.white} style={{ marginBottom: 8 }} />
+                                        <Text style={styles.photoButtonText}>{t('take_photo')}</Text>
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity
-                                    style={[styles.photoButton, styles.photoButtonSecondary]}
+                                    style={[styles.photoButton, isOnSite && styles.photoButtonSecondary]}
                                     onPress={handleChooseFromGallery}
                                 >
-                                    <Ionicons name="images" size={48} color={COLORS.primary} style={{ marginBottom: 8 }} />
-                                    <Text style={[styles.photoButtonText, { color: COLORS.primary }]}>{t('choose_from_gallery')}</Text>
+                                    <Ionicons
+                                        name="images"
+                                        size={48}
+                                        color={isOnSite ? COLORS.primary : COLORS.white}
+                                        style={{ marginBottom: 8 }}
+                                    />
+                                    <Text style={[styles.photoButtonText, isOnSite && { color: COLORS.primary }]}>
+                                        {t('choose_from_gallery')}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                         )}
